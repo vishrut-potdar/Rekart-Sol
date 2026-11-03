@@ -8,7 +8,8 @@ export class ReuseService {
     const lowerCategory = category.toLowerCase();
     const lowerType = subType.toLowerCase();
 
-    if (lowerCategory === 'electronics' && (lowerType.includes('phone') || lowerType.includes('smartphone'))) {
+    // "headphones" contains "phone"; only real phones get the phone ideas
+    if (lowerCategory === 'electronics' && lowerType.includes('phone') && !lowerType.includes('headphone')) {
       return {
         item: 'Old Smartphone',
         repurposing_cards: [

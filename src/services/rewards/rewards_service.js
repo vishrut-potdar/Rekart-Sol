@@ -26,18 +26,7 @@ export class RewardsService {
       timestamp: new Date().toISOString()
     };
 
-    const user = await db.findUserById(userId);
-    let currentBalance = user?.metadata?.circular_points || 0;
-    const newBalance = currentBalance + points;
-
-    if (user) {
-      await db.updateItem(userId, {
-        metadata: {
-          ...user.metadata,
-          circular_points: newBalance
-        }
-      });
-    }
+    const newBalance = await db.addPoints(userId, points);
 
     return {
       transaction_id: transaction.id,
@@ -53,9 +42,15 @@ export class RewardsService {
    * Redeems points for partner repair discounts or marketplace vouchers
    */
   static async redeemPoints({ userId, pointsToRedeem, partnerId = 'p-rep-001' }) {
+    const fail = message => Object.assign(new Error(message), { status: 400 });
     if (pointsToRedeem < 200) {
-      throw new Error('Minimum redemption threshold is 200 circular points.');
+      throw fail('Minimum redemption threshold is 200 circular points.');
     }
+    const balance = await db.getPoints(userId);
+    if (pointsToRedeem > balance) {
+      throw fail(`Not enough points: you have ${balance}, tried to redeem ${pointsToRedeem}.`);
+    }
+    const newBalance = await db.addPoints(userId, -pointsToRedeem);
 
     // Conversion rate: 2 points = ₹1 INR discount
     const discountAmountInr = Math.floor(pointsToRedeem / 2);
@@ -64,6 +59,7 @@ export class RewardsService {
     return {
       voucher_code: voucherCode,
       points_redeemed: pointsToRedeem,
+      new_points_balance: newBalance,
       discount_amount_inr: discountAmountInr,
       applicable_partner_id: partnerId,
       validity_days: 90,

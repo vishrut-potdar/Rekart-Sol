@@ -33,6 +33,18 @@ class MemoryStore {
     this.calibrationLogs = [];
     this.payoutTransactions = new Map();
     this.commissionInvoices = new Map();
+    this.pointBalances = new Map(); // userId -> circular points (works for guests too)
+  }
+
+  // Circular points
+  async getPoints(userId) {
+    return this.pointBalances.get(userId) || 0;
+  }
+
+  async addPoints(userId, delta) {
+    const balance = (await this.getPoints(userId)) + delta;
+    this.pointBalances.set(userId, balance);
+    return balance;
   }
 
   // Users & Auth

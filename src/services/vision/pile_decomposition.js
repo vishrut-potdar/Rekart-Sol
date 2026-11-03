@@ -34,7 +34,8 @@ export class PileDecompositionService {
           sub_type: detection.sub_type,
           visual_defects: detection.visual_defects || [],
           requires_exception_closeup: Boolean(detection.requires_exception_closeup),
-          exception_reason: detection.exception_reason || null
+          exception_reason: detection.exception_reason || null,
+          simulated: Boolean(detection.simulated)
         },
         status: 'triaging'
       });

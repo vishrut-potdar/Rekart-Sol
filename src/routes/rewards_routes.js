@@ -1,6 +1,7 @@
 import express from 'express';
 import { RewardsService } from '../services/rewards/rewards_service.js';
 import { optionalAuth } from '../middleware/auth.js';
+import { db } from '../db/connection.js';
 
 const router = express.Router();
 
@@ -22,6 +23,16 @@ router.post('/award', optionalAuth, async (req, res, next) => {
     });
 
     return res.status(201).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 1b. Current points balance
+router.get('/balance', optionalAuth, async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.query.userId || 'user_guest';
+    return res.status(200).json({ success: true, data: { user_id: userId, points_balance: await db.getPoints(userId) } });
   } catch (err) {
     next(err);
   }

@@ -87,6 +87,8 @@
     .mlayer.on .mback{opacity:1}
     .modal{position:relative;background:#fff;border-radius:24px;width:100%;max-width:500px;padding:24px 26px;box-shadow:0 24px 70px rgba(0,0,0,.25);transform:translateY(14px) scale(.97);opacity:0;transition:.32s cubic-bezier(.32,.72,0,1)}
     .modal.up{transform:none;opacity:1}
+    /* closed dialogs leave the flex row so the open one gets its full width */
+    .modal:not(.up){position:absolute;visibility:hidden;pointer-events:none}
     /* per-item icon slots */
     .picon{display:none}
     .picon.on{display:flex}
@@ -1560,5 +1562,6 @@ navigateTo('home');
 icons();
 </script>
 <script src="rekart-api.js"></script>
+<script src="rekart-features.js"></script>
 </body>
 </html>

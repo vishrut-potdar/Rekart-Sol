@@ -56,7 +56,7 @@ export class AiVisionProvider {
       }
     }
 
-    // High-fidelity heuristic engine fallback
+    // No AI provider available: fixed sample detections, flagged simulated so the UI can label them as a demo
     return [
       {
         box_id: 'box_01',
@@ -67,7 +67,8 @@ export class AiVisionProvider {
         bounding_box: { x: 45, y: 30, width: 340, height: 420, confidence: 0.94 },
         visual_defects: ['mild_collar_wear'],
         color: 'Navy Blue',
-        provisional_grade: 'B'
+        provisional_grade: 'B',
+        simulated: true
       },
       {
         box_id: 'box_02',
@@ -78,7 +79,8 @@ export class AiVisionProvider {
         bounding_box: { x: 380, y: 50, width: 310, height: 460, confidence: 0.91 },
         visual_defects: [],
         color: 'Dark Indigo',
-        provisional_grade: 'A'
+        provisional_grade: 'A',
+        simulated: true
       },
       {
         box_id: 'box_03',
@@ -90,6 +92,7 @@ export class AiVisionProvider {
         visual_defects: ['frayed_cuff_ambiguity'],
         color: 'Charcoal Grey',
         provisional_grade: 'B',
+        simulated: true,
         requires_exception_closeup: true,
         exception_reason: 'Ambiguity detected around sleeve cuff: check for moth holes or fraying'
       }

@@ -9,6 +9,11 @@ import { MediaStorageService } from '../services/vision/media_storage.js';
 import { jobQueue } from '../services/queue/job_queue.js';
 import { optionalAuth } from '../middleware/auth.js';
 
+// Locally stored uploads are read back so AI vision providers receive the actual image, not a relative path.
+const readLocalUpload = url => (typeof url === 'string' && url.startsWith('/uploads/')
+  ? fs.readFile(path.resolve(ENV.LOCAL_UPLOAD_DIR, path.basename(url))).catch(() => null)
+  : null);
+
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 const router = express.Router();
 
@@ -24,7 +29,8 @@ router.post('/decompose-pile', optionalAuth, async (req, res, next) => {
     const result = await PileDecompositionService.decomposePhoto({
       batchPhotoUrl,
       userId: resolvedUserId,
-      assumedCategory
+      assumedCategory,
+      imageBuffer: await readLocalUpload(batchPhotoUrl)
     });
     return res.status(200).json({ success: true, data: result });
   } catch (err) {
@@ -66,10 +72,7 @@ router.post('/classify-single', async (req, res, next) => {
     if (!imageUrl) {
       return res.status(400).json({ error: 'imageUrl is required' });
     }
-    // Locally stored uploads are read back so AI vision providers receive the actual image, not a relative path.
-    const imageBuffer = imageUrl.startsWith('/uploads/')
-      ? await fs.readFile(path.resolve(ENV.LOCAL_UPLOAD_DIR, path.basename(imageUrl))).catch(() => null)
-      : null;
+    const imageBuffer = await readLocalUpload(imageUrl);
     const classification = await SingleItemClassifierService.classifyImage({ imageUrl, userHint, imageBuffer });
     return res.status(200).json({ success: true, data: classification });
   } catch (err) {
