@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekart - Partner Terminal & Physical Check-In</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        🏬 Rekart Partner Terminal <span class="badge">Nagpur Network</span>
+      </div>
+      <nav class="nav-links">
+        <a href="/">Donor Portal</a>
+        <a href="/partner.html" class="active">Partner Terminal</a>
+      </nav>
+    </header>
+
+    <div class="grid-2">
+      <!-- Left Column: Technician Login & Lead Check-in -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">🔑 Technician / Partner Login</h2>
+          </div>
+          <div class="form-group">
+            <label>Partner Email</label>
+            <input type="email" id="partnerEmail" value="tech.sitabuldi@rekart.in">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="partnerPassword" value="Rekart@123">
+          </div>
+          <button class="btn btn-primary" onclick="loginPartner()">Log In to Terminal</button>
+          <div id="loginStatus" class="result-box" style="display:none;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">📦 Physical Item Inspection & Grade Amendment</h2>
+          </div>
+          <div class="form-group">
+            <label>Lead Reference ID</label>
+            <input type="text" id="checkInLeadId" placeholder="e.g. 8055fa19-350b-482b-8f18-5b232431c9fd">
+          </div>
+          <div class="form-group">
+            <label>Confirmed Physical Grade</label>
+            <select id="confirmedGrade">
+              <option value="A">Grade A (Like New / Mint)</option>
+              <option value="B" selected>Grade B (Minor Wear / Functional)</option>
+              <option value="C">Grade C (Heavy Wear / Screen Defect)</option>
+              <option value="BER">Grade BER (Beyond Economical Repair / E-Waste)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Discrepancy Notes (if grade amended)</label>
+            <input type="text" id="discrepancyReason" value="Checked motherboard under microscope: minor flux residue">
+          </div>
+          <div class="form-group">
+            <label>Settled Actual Amount (₹ INR)</label>
+            <input type="number" id="settledAmount" value="4200">
+          </div>
+          <button class="btn btn-secondary" onclick="submitPhysicalCheckIn()">Confirm Physical Inspection</button>
+          <div id="checkInResult" class="result-box" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- Right Column: Digital Proof Certificate Issuance -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">📜 Issue Tamper-Proof Digital Proof</h2>
+          </div>
+          <div class="form-group">
+            <label>Lead ID</label>
+            <input type="text" id="proofLeadId" placeholder="Lead ID from check-in">
+          </div>
+          <div class="form-group">
+            <label>Proof Type</label>
+            <select id="proofType">
+              <option value="formal_repair_warranty_certificate">Repair Warranty Certificate (6 Months)</option>
+              <option value="formal_recycling_certificate">CPCB Zero-Landfill Recycling Certificate</option>
+              <option value="ngo_distribution_proof">NGO Beneficiary Distribution Proof</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Document / Scan URL</label>
+            <input type="text" id="proofDocumentUrl" value="https://cdn.rekart.in/certs/nagpur_partner_01.pdf">
+          </div>
+          <button class="btn btn-primary" onclick="issueDigitalProof()">Generate Signed Proof Certificate</button>
+          <div id="proofResult" class="result-box" style="display:none;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">📍 Nagpur Active Shortages & Drives</h2>
+          </div>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+            NGOs and drives in Nagpur with active demand backlogs:
+          </p>
+          <button class="btn btn-outline" onclick="loadNagpurDemands()">Refresh Community Shortages</button>
+          <div id="demandsList" style="margin-top: 1rem;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

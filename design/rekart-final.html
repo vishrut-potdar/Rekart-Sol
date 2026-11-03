@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REKART — Intelligent Second-Life Decision Platform · Nagpur</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Mukta:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"','Mukta','Inter','sans-serif'], mono: ['ui-monospace','SFMono-Regular','Menlo','monospace'] },
+          colors: {
+            brand: {50:'#F2F8F5',100:'#E1F0EA',200:'#C2E0D3',300:'#94C7B3',400:'#5FA98D',500:'#348B6C',600:'#257056',700:'#1D5844',800:'#174536',900:'#13392D',950:'#0A2019'},
+            surface: {cream:'#FAF8F5',ivory:'#F4F1EA',card:'#FFFFFF',subtle:'#F7F9F8',charcoal:'#171918',muted:'#69706C'},
+          },
+          boxShadow: {
+            subtle:'0 2px 10px rgba(19,57,45,.04), 0 1px 3px rgba(0,0,0,.02)',
+            premium:'0 12px 30px -6px rgba(19,57,45,.08), 0 4px 12px -2px rgba(0,0,0,.03)',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:#F4F1EA}
+    ::-webkit-scrollbar-thumb{background:#C2E0D3;border-radius:9999px}
+    ::-webkit-scrollbar-thumb:hover{background:#94C7B3}
+    @keyframes scanline{0%{transform:translateY(0);opacity:.8}50%{opacity:.3}100%{transform:translateY(240px);opacity:.8}}
+    .animate-scan{animation:scanline 2.2s ease-in-out infinite alternate}
+    .bg-paper{background-color:#FAF9F5;background-image:radial-gradient(#1D5844 .65px,transparent .65px);background-size:24px 24px}
+    .dstep{display:flex;gap:11px;align-items:center;opacity:0;transform:translateY(4px);transition:.3s;text-align:left}
+    .dstep.in{opacity:1;transform:none}
+    .dk{width:20px;height:20px;border-radius:9999px;border:1.5px solid #D6D3D1;display:grid;place-items:center;flex:none;transition:.2s}
+    .dstep.ok .dk{background:#348B6C;border-color:#348B6C}
+    .dstep.ok .dk::after{content:"";width:9px;height:5px;border-left:1.8px solid #fff;border-bottom:1.8px solid #fff;transform:rotate(-45deg) translateY(-1px)}
+    .ring-track{fill:none;stroke:#E7E5E4;stroke-width:6.5}
+    .ring-fill{fill:none;stroke:#348B6C;stroke-width:6.5;stroke-linecap:round;stroke-dasharray:201.06;stroke-dashoffset:201.06;transition:stroke-dashoffset .9s cubic-bezier(.25,.8,.3,1)}
+    .g-track{position:relative;height:12px;border-radius:9999px;background:#EAE8E2}
+    .g-band{position:absolute;top:0;bottom:0;background:#C2E0D3;border-radius:9999px;transition:left .4s,width .4s}
+    .g-marker{position:absolute;top:-7px;bottom:-7px;width:2px;background:#171918;border-radius:1px;transform:translateX(-1px);transition:left .45s cubic-bezier(.3,.8,.3,1)}
+    .g-flag{position:absolute;top:-28px;transform:translateX(-50%);font-weight:700;font-size:12px;white-space:nowrap;transition:left .45s cubic-bezier(.3,.8,.3,1);font-variant-numeric:tabular-nums}
+    .g-flag.fr{transform:translateX(-100%)}.g-flag.fl{transform:translateX(0)}
+    .gauge.empty .g-marker,.gauge.empty .g-flag{opacity:0}
+    .grow{display:grid;grid-template-rows:0fr;transition:grid-template-rows .38s cubic-bezier(.3,.7,.3,1)}
+    .grow>div{overflow:hidden}
+    .open .grow{grid-template-rows:1fr}
+    .ckrow{display:flex;gap:13px;align-items:flex-start;padding:10px 0;cursor:pointer}
+    .ck{width:22px;height:22px;border-radius:9999px;border:1.5px solid #D6D3D1;flex:none;display:grid;place-items:center;transition:.2s;margin-top:1px}
+    .ck-in{width:9px;height:5px;border-left:1.8px solid #fff;border-bottom:1.8px solid #fff;transform:rotate(-45deg) translateY(-1px);opacity:0;transition:.15s}
+    .ckrow.done .ck{background:#348B6C;border-color:#348B6C}
+    .ckrow.done .ck-in{opacity:1}
+    .sw{position:relative;width:51px;height:31px;display:inline-block;flex:none}
+    .sw input{position:absolute;opacity:0;inset:0;cursor:pointer;margin:0;z-index:1}
+    .sw .knob{position:absolute;inset:0;border-radius:9999px;background:#D6D3D1;transition:background .2s}
+    .sw .knob::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:9999px;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:left .2s}
+    .sw input:checked+.knob{background:#348B6C}
+    .sw input:checked+.knob::after{left:22px}
+    .vstep{display:flex;gap:13px;align-items:flex-start;padding:13px 0;border-bottom:1px solid #F0EFEB;cursor:pointer}
+    .vstep:last-of-type{border-bottom:none}
+    .vc{width:24px;height:24px;border-radius:9999px;border:1.5px solid #D6D3D1;flex:none;display:grid;place-items:center;transition:.25s;margin-top:1px}
+    .vstep .ck-in{width:10px;height:5px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .vstep.checking .vc{border-top-color:#348B6C;animation:spin .7s linear infinite}
+    .vstep.done .vc{background:#348B6C;border-color:#348B6C;animation:none}
+    .vstep.done .ck-in{opacity:1}
+    @keyframes shakex{0%,100%{transform:none}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+    .shake{animation:shakex .28s}
+    @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .rise{animation:rise .35s ease both}
+    .toast{position:fixed;bottom:26px;left:50%;transform:translate(-50%,10px);opacity:0;z-index:90;background:#171918;color:#fff;font-weight:500;font-size:13.5px;padding:12px 18px;border-radius:9999px;transition:.3s;pointer-events:none;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    .mlayer{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:20px;visibility:hidden;transition:visibility .4s}
+    .mlayer.on{visibility:visible}
+    .mback{position:absolute;inset:0;background:rgba(23,25,24,.4);opacity:0;transition:opacity .3s}
+    .mlayer.on .mback{opacity:1}
+    .modal{position:relative;background:#fff;border-radius:24px;width:100%;max-width:500px;padding:24px 26px;box-shadow:0 24px 70px rgba(0,0,0,.25);transform:translateY(14px) scale(.97);opacity:0;transition:.32s cubic-bezier(.32,.72,0,1)}
+    .modal.up{transform:none;opacity:1}
+    /* per-item icon slots */
+    .picon{display:none}
+    .picon.on{display:flex}
+    /* route recommended dot */
+    .rdot{display:none}
+    .route-btn.rec .rdot{display:inline-block}
+  </style>
+</head>
+
+<body class="bg-[#FAF8F5] text-[#171918] selection:bg-brand-100 selection:text-brand-900 font-sans min-h-screen flex-col antialiased">
+
+<!-- ============ HEADER ============ -->
+<header class="sticky top-0 z-40 backdrop-blur-md bg-[#FAF8F5]/90 border-b border-stone-200/80">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 xl:py-0 xl:h-20 flex flex-wrap xl:flex-nowrap items-center gap-x-2 sm:gap-x-4 gap-y-2.5">
+    <a href="javascript:void(0)" onclick="goTab('home')" class="order-1 flex items-center gap-2 sm:gap-3 group shrink-0">
+      <div class="w-10 h-10 rounded-xl bg-brand-900 flex items-center justify-center text-white shadow-sm transition-transform duration-300 group-hover:scale-105">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="text-brand-300">
+          <path d="M7 3v4a2 2 0 0 0 2 2h7a4 4 0 0 1 4 4v2"/><path d="M17 21v-4a2 2 0 0 0-2-2H8a4 4 0 0 1-4-4V9"/>
+          <polyline points="14 6 17 3 20 6"/><polyline points="10 18 7 21 4 18"/>
+        </svg>
+      </div>
+      <div class="flex flex-col">
+        <span class="text-xl font-bold tracking-tight text-brand-950 flex items-center gap-1">REKART<span class="w-1.5 h-1.5 rounded-full bg-brand-500 inline-block"></span></span>
+        <span class="hidden sm:block text-[10px] tracking-widest uppercase font-semibold text-stone-600 -mt-1">Nagpur · <span data-i18n="hdr_sub"></span></span>
+      </div>
+    </a>
+
+    <nav class="order-3 md:order-2 w-full md:w-auto flex items-center gap-1 bg-stone-200/40 p-1 rounded-full border border-stone-200/70 text-sm font-medium overflow-x-auto" aria-label="Main">
+      <button onclick="goTab('home')" class="nav-btn flex-1 md:flex-none px-2.5 sm:px-4 py-2 rounded-full transition-all whitespace-nowrap" data-target="home" data-i18n="nav_home"></button>
+      <button onclick="goTab('donate')" class="nav-btn flex-1 md:flex-none px-2.5 sm:px-4 py-2 rounded-full transition-all whitespace-nowrap" data-target="donate" data-i18n="nav_don"></button>
+      <button onclick="goTab('repair')" class="nav-btn flex-1 md:flex-none px-2.5 sm:px-4 py-2 rounded-full transition-all whitespace-nowrap" data-target="repair" data-i18n="nav_rep"></button>
+      <button onclick="goTab('reuse-gallery')" class="nav-btn flex-1 md:flex-none px-2.5 sm:px-4 py-2 rounded-full transition-all whitespace-nowrap" data-target="reuse-gallery" data-i18n="nav_reu"></button>
+    </nav>
+
+    <form id="srchWrap" onsubmit="return searchSubmit(event)" class="order-4 xl:order-3 relative w-full md:w-auto md:flex-1 xl:max-w-md min-w-[240px]" role="search">
+      <i data-lucide="sparkles" class="w-4 h-4 text-brand-600 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+      <input id="srch" type="search" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="srchList" aria-autocomplete="list"
+        class="w-full pl-10 pr-4 py-2.5 rounded-full bg-white border border-stone-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none text-sm placeholder:text-stone-400 transition-all" />
+      <div id="srchList" role="listbox" class="hidden absolute z-50 top-full mt-2 left-0 right-0 bg-white rounded-2xl shadow-premium border border-stone-200/80 p-1.5 max-h-[60vh] overflow-auto"></div>
+    </form>
+
+    <div class="order-2 md:order-3 xl:order-4 ml-auto flex items-center gap-1 sm:gap-3">
+      <div class="flex items-center bg-stone-200/40 p-0.5 rounded-full border border-stone-200/70 text-[11px] font-bold">
+        <button onclick="applyLang('en')" class="lang-btn px-1.5 sm:px-2.5 py-1.5 rounded-full transition-all">EN</button>
+        <button onclick="applyLang('hi')" class="lang-btn px-1.5 sm:px-2.5 py-1.5 rounded-full transition-all">हिं</button>
+        <button onclick="applyLang('hg')" class="lang-btn px-1.5 sm:px-2.5 py-1.5 rounded-full transition-all">Hinglish</button>
+      </div>
+      <button onclick="toggleNotificationPanel()" class="relative p-2 sm:p-2.5 rounded-full text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors" title="Notifications">
+        <i data-lucide="bell" class="w-5 h-5"></i>
+        <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-brand-500 ring-2 ring-[#FAF8F5]"></span>
+      </button>
+      <button onclick="navigateTo('dashboard')" class="flex items-center gap-2 p-1 sm:p-1.5 xl:pr-3 rounded-full hover:bg-stone-200/50 transition-colors" title="Account">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white">AR</div>
+        <span class="text-xs font-semibold text-stone-700 hidden xl:inline">Aarav R.</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- notifications -->
+<div id="notificationDrawer" class="hidden fixed top-24 right-4 sm:right-8 z-50 w-80 bg-white rounded-2xl shadow-premium border border-stone-200/80 p-4">
+  <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+    <div class="flex items-center gap-2"><i data-lucide="bell" class="w-4 h-4 text-brand-700"></i><span class="text-sm font-bold text-stone-800" data-i18n="nt_t"></span></div>
+    <button onclick="toggleNotificationPanel()" class="text-stone-500 hover:text-stone-800 text-xs font-semibold" data-i18n="nt_x"></button>
+  </div>
+  <div class="py-2 space-y-2.5 text-xs">
+    <div class="p-2.5 rounded-xl bg-brand-50/60 border border-brand-100 flex items-start gap-2.5">
+      <div class="w-2 h-2 rounded-full bg-brand-500 mt-1 flex-shrink-0"></div>
+      <div><p class="font-semibold text-brand-950" data-i18n="nt1_t"></p><p class="text-stone-500 text-[11px] mt-0.5" data-i18n="nt1_s"></p><span class="text-[10px] text-stone-400 mt-1 block">15m</span></div>
+    </div>
+    <div class="p-2.5 rounded-xl bg-stone-50 border border-stone-100 flex items-start gap-2.5">
+      <div class="w-2 h-2 rounded-full bg-amber-500 mt-1 flex-shrink-0"></div>
+      <div><p class="font-semibold text-stone-800" data-i18n="nt2_t"></p><p class="text-stone-500 text-[11px] mt-0.5" data-i18n="nt2_s"></p><span class="text-[10px] text-stone-400 mt-1 block">2h</span></div>
+    </div>
+  </div>
+</div>
+
+<main class="flex-grow">
+
+<!-- ============ SCREEN: HOME ============ -->
+<section id="screen-home" class="screen-view">
+  <div class="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28 border-b border-stone-200/60 bg-paper">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      <div class="lg:col-span-7 space-y-8 text-left">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-100/70 border border-brand-200 text-brand-900 text-xs font-semibold">
+          <span class="w-2 h-2 rounded-full bg-brand-600 animate-pulse"></span><span data-i18n="hero_badge"></span>
+        </div>
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-brand-950 leading-[1.12]">
+          <span data-i18n="hero_t1"></span> <span class="text-brand-600 underline decoration-brand-300 decoration-wavy decoration-2" data-i18n="hero_t2"></span>
+        </h1>
+        <p class="text-lg text-stone-600 leading-relaxed max-w-2xl" data-i18n="hero_s"></p>
+        <div class="flex flex-wrap items-center gap-4 pt-2">
+          <button onclick="navigateTo('analyze')" class="px-7 py-3.5 rounded-full bg-brand-900 hover:bg-brand-800 text-white font-semibold text-base transition-all shadow-subtle hover:shadow-premium flex items-center gap-3 group">
+            <span data-i18n="hero_cta1"></span><i data-lucide="camera" class="w-4 h-4 text-brand-300 group-hover:rotate-12 transition-transform"></i>
+          </button>
+          <button onclick="scrollToSection('how-it-works')" class="px-6 py-3.5 rounded-full bg-white hover:bg-stone-50 text-stone-800 font-semibold text-base border border-stone-200/90 shadow-sm transition-all flex items-center gap-2">
+            <span data-i18n="hero_cta2"></span><i data-lucide="arrow-down" class="w-4 h-4 text-stone-600"></i>
+          </button>
+        </div>
+        <div class="pt-6 flex flex-wrap items-center gap-8 border-t border-stone-200/80 text-xs text-stone-500">
+          <div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-800"><i data-lucide="check" class="w-4 h-4"></i></div><div><span class="block font-bold text-stone-900 text-sm">6,800+</span><span data-i18n="stat1"></span></div></div>
+          <div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-800"><i data-lucide="shield-check" class="w-4 h-4"></i></div><div><span class="block font-bold text-stone-900 text-sm">41</span><span data-i18n="stat2"></span></div></div>
+          <div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-800"><i data-lucide="clock" class="w-4 h-4"></i></div><div><span class="block font-bold text-stone-900 text-sm">&lt; 30 s</span><span data-i18n="stat3"></span></div></div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-5 relative">
+        <div class="relative mx-auto max-w-md lg:max-w-none bg-white rounded-3xl p-6 shadow-premium border border-stone-200/80">
+          <div class="flex items-center justify-between pb-4 border-b border-stone-100">
+            <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-brand-500"></span><span class="text-xs font-bold text-stone-800 uppercase tracking-wider" data-i18n="hc_k"></span></div>
+            <span class="text-[11px] font-mono text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md">LIVE</span>
+          </div>
+          <div class="py-6 space-y-6">
+            <div class="flex items-center gap-4 p-3.5 rounded-2xl bg-stone-50 border border-stone-200/60">
+              <div class="w-14 h-14 rounded-xl bg-stone-200/70 flex items-center justify-center flex-shrink-0">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>
+              </div>
+              <div class="flex-grow">
+                <div class="flex items-center justify-between"><span class="text-[11px] font-semibold text-stone-500 uppercase tracking-wide" data-i18n="hc_unused"></span><span class="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-medium" data-i18n="hc_fate"></span></div>
+                <h4 class="text-sm font-bold text-stone-900 mt-0.5">Sony WH-1000XM4</h4>
+                <p class="text-xs text-stone-500" data-i18n="hc_sub"></p>
+              </div>
+            </div>
+            <div class="flex items-center justify-center -my-2">
+              <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 border border-brand-200/80 text-brand-800 text-xs font-semibold"><i data-lucide="cpu" class="w-3.5 h-3.5 text-brand-600"></i><span data-i18n="hc_engine"></span><i data-lucide="arrow-down" class="w-3.5 h-3.5"></i></div>
+            </div>
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-brand-900 to-brand-800 text-white shadow-lg relative overflow-hidden">
+              <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-brand-600/30 rounded-full blur-xl pointer-events-none"></div>
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-2"><span class="p-1.5 rounded-lg bg-brand-700/80 text-brand-200"><i data-lucide="wrench" class="w-4 h-4"></i></span><span class="text-xs font-bold text-brand-200 uppercase tracking-wide" data-i18n="hc_rec"></span></div>
+                <span class="px-2 py-0.5 rounded-full bg-brand-500/30 border border-brand-400/40 text-brand-100 text-xs font-bold">92%</span>
+              </div>
+              <div class="mt-3">
+                <div class="text-xl font-bold" data-i18n="hc_title"></div>
+                <p class="text-xs text-brand-100/80 mt-1 leading-relaxed" data-i18n="hc_body"></p>
+              </div>
+              <div class="mt-4 pt-3 border-t border-brand-700/60 flex items-center justify-between text-[11px]">
+                <span class="text-brand-300" data-i18n="hc_alt"></span>
+                <div class="flex gap-1.5"><span class="px-2 py-0.5 rounded bg-brand-950/40 text-brand-200 font-medium">Sell ₹6,800</span><span class="px-2 py-0.5 rounded bg-brand-950/40 text-brand-200 font-medium">Donate</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-stone-50 rounded-xl p-3 flex items-center justify-between text-xs text-stone-600">
+            <span class="flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-600"></i><span data-i18n="hc_foot"></span></span>
+            <button onclick="loadSampleItem('headphones');navigateTo('analyze')" class="font-bold text-brand-800 hover:underline" data-i18n="hc_try"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section id="how-it-works" class="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-3xl mx-auto space-y-3 mb-14">
+      <span class="text-xs font-bold uppercase tracking-widest text-brand-700" data-i18n="hiw_k"></span>
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-brand-950" data-i18n="hiw_t"></h2>
+      <p class="text-stone-600 text-base sm:text-lg" data-i18n="hiw_s"></p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle hover:shadow-premium transition-all group">
+        <div class="flex items-center justify-between mb-5"><span class="text-2xl font-black text-brand-200 font-mono group-hover:text-brand-500 transition-colors">01</span><div class="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-stone-700"><i data-lucide="upload-cloud" class="w-5 h-5"></i></div></div>
+        <h3 class="text-lg font-bold text-stone-900 mb-1" data-i18n="st1_t"></h3><p class="text-xs text-stone-600 leading-relaxed" data-i18n="st1_s"></p>
+      </div>
+      <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle hover:shadow-premium transition-all group">
+        <div class="flex items-center justify-between mb-5"><span class="text-2xl font-black text-brand-200 font-mono group-hover:text-brand-500 transition-colors">02</span><div class="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-700"><i data-lucide="scan" class="w-5 h-5"></i></div></div>
+        <h3 class="text-lg font-bold text-stone-900 mb-1" data-i18n="st2_t"></h3><p class="text-xs text-stone-600 leading-relaxed" data-i18n="st2_s"></p>
+      </div>
+      <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle hover:shadow-premium transition-all group">
+        <div class="flex items-center justify-between mb-5"><span class="text-2xl font-black text-brand-200 font-mono group-hover:text-brand-500 transition-colors">03</span><div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-700"><i data-lucide="compass" class="w-5 h-5"></i></div></div>
+        <h3 class="text-lg font-bold text-stone-900 mb-1" data-i18n="st3_t"></h3><p class="text-xs text-stone-600 leading-relaxed" data-i18n="st3_s"></p>
+      </div>
+      <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle hover:shadow-premium transition-all group">
+        <div class="flex items-center justify-between mb-5"><span class="text-2xl font-black text-brand-200 font-mono group-hover:text-brand-500 transition-colors">04</span><div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700"><i data-lucide="zap" class="w-5 h-5"></i></div></div>
+        <h3 class="text-lg font-bold text-stone-900 mb-1" data-i18n="st4_t"></h3><p class="text-xs text-stone-600 leading-relaxed" data-i18n="st4_s"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 bg-stone-100/70 border-y border-stone-200/70">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-10">
+        <div><span class="text-xs font-bold uppercase tracking-widest text-brand-800" data-i18n="paths_k"></span><h2 class="text-3xl font-extrabold text-stone-900 mt-1" data-i18n="paths_t"></h2></div>
+        <button onclick="navigateTo('compare')" class="mt-4 md:mt-0 text-sm font-bold text-brand-800 hover:text-brand-950 flex items-center gap-1"><span data-i18n="paths_cta"></span> &rarr;</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="bg-white rounded-2xl p-5 border border-stone-200/80 hover:border-brand-300 shadow-subtle hover:-translate-y-1 transition-all">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center mb-4"><i data-lucide="wrench" class="w-5 h-5"></i></div>
+          <h4 class="font-bold text-stone-900" data-i18n="p1_t"></h4><p class="text-xs text-stone-500 mt-1 leading-relaxed" data-i18n="p1_s"></p>
+          <div class="mt-4 pt-3 border-t border-stone-100 text-[11px] font-semibold text-emerald-700" data-i18n="p1_tag"></div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-stone-200/80 hover:border-amber-300 shadow-subtle hover:-translate-y-1 transition-all">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center mb-4"><i data-lucide="tag" class="w-5 h-5"></i></div>
+          <h4 class="font-bold text-stone-900" data-i18n="p2_t"></h4><p class="text-xs text-stone-500 mt-1 leading-relaxed" data-i18n="p2_s"></p>
+          <div class="mt-4 pt-3 border-t border-stone-100 text-[11px] font-semibold text-amber-700" data-i18n="p2_tag"></div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-stone-200/80 hover:border-sky-300 shadow-subtle hover:-translate-y-1 transition-all">
+          <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-800 flex items-center justify-center mb-4"><i data-lucide="heart-handshake" class="w-5 h-5"></i></div>
+          <h4 class="font-bold text-stone-900" data-i18n="p3_t"></h4><p class="text-xs text-stone-500 mt-1 leading-relaxed" data-i18n="p3_s"></p>
+          <div class="mt-4 pt-3 border-t border-stone-100 text-[11px] font-semibold text-sky-700" data-i18n="p3_tag"></div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-stone-200/80 hover:border-purple-300 shadow-subtle hover:-translate-y-1 transition-all">
+          <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-800 flex items-center justify-center mb-4"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+          <h4 class="font-bold text-stone-900" data-i18n="p4_t"></h4><p class="text-xs text-stone-500 mt-1 leading-relaxed" data-i18n="p4_s"></p>
+          <div class="mt-4 pt-3 border-t border-stone-100 text-[11px] font-semibold text-purple-700" data-i18n="p4_tag"></div>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-stone-200/80 hover:border-stone-400 shadow-subtle hover:-translate-y-1 transition-all">
+          <div class="w-10 h-10 rounded-xl bg-stone-100 text-stone-800 flex items-center justify-center mb-4"><i data-lucide="recycle" class="w-5 h-5"></i></div>
+          <h4 class="font-bold text-stone-900" data-i18n="p5_t"></h4><p class="text-xs text-stone-500 mt-1 leading-relaxed" data-i18n="p5_s"></p>
+          <div class="mt-4 pt-3 border-t border-stone-100 text-[11px] font-semibold text-stone-600" data-i18n="p5_tag"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="rounded-3xl bg-brand-950 text-white p-8 md:p-14 relative overflow-hidden shadow-premium">
+      <div class="absolute -right-16 -top-16 w-80 h-80 bg-brand-700/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="max-w-2xl relative z-10 space-y-4">
+        <span class="text-xs font-bold uppercase tracking-widest text-brand-300" data-i18n="cta_k"></span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="cta_t"></h2>
+        <p class="text-stone-300 leading-relaxed" data-i18n="cta_s"></p>
+        <div class="pt-4 flex flex-wrap items-center gap-4">
+          <button onclick="navigateTo('analyze')" class="px-7 py-3.5 rounded-full bg-white hover:bg-stone-100 text-brand-950 font-bold text-sm shadow-subtle flex items-center gap-2"><span data-i18n="cta_b1"></span><i data-lucide="arrow-right" class="w-4 h-4 text-brand-800"></i></button>
+          <button onclick="loadSampleItem('headphones');navigateTo('analyze')" class="px-5 py-3.5 rounded-full bg-brand-900 hover:bg-brand-800 text-brand-100 text-sm font-medium border border-brand-800" data-i18n="cta_b2"></button>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============ SCREEN: ANALYZE ============ -->
+<section id="screen-analyze" class="screen-view hidden py-12 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="text-center max-w-2xl mx-auto mb-10 space-y-2">
+    <span class="text-xs font-bold uppercase tracking-widest text-brand-700" data-i18n="an_k"></span>
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-brand-950" data-i18n="an_t"></h1>
+    <p class="text-stone-600 text-sm sm:text-base" data-i18n="an_s"></p>
+  </div>
+
+  <div class="bg-white rounded-3xl p-6 sm:p-10 border border-stone-200/80 shadow-premium">
+    <div id="dropZone" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" class="relative border-2 border-dashed border-stone-300 hover:border-brand-500 rounded-2xl p-8 sm:p-12 text-center transition-all bg-stone-50/70 hover:bg-brand-50/30 cursor-pointer group">
+      <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFileSelect(event)" />
+      <div id="uploadPlaceholder" class="space-y-4">
+        <div class="w-16 h-16 rounded-2xl bg-white shadow-sm border border-stone-200/80 flex items-center justify-center mx-auto text-brand-700 group-hover:scale-110 transition-transform"><i data-lucide="image-plus" class="w-8 h-8"></i></div>
+        <div>
+          <p class="text-base font-bold text-stone-800"><span data-i18n="drop_t1"></span> <span class="text-brand-700 underline" onclick="document.getElementById('fileInput').click()" data-i18n="drop_t2"></span></p>
+          <p class="text-xs text-stone-500 mt-1" data-i18n="drop_s"></p>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <button type="button" onclick="document.getElementById('fileInput').click()" class="px-4 py-2 rounded-full bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 text-xs font-semibold shadow-sm flex items-center gap-2"><i data-lucide="upload" class="w-3.5 h-3.5"></i><span data-i18n="choose"></span></button>
+          <button type="button" onclick="triggerWebcamMock()" class="px-4 py-2 rounded-full bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 text-xs font-semibold shadow-sm flex items-center gap-2"><i data-lucide="camera" class="w-3.5 h-3.5"></i><span data-i18n="take"></span></button>
+          <button type="button" onclick="toast(t('t_pile'))" class="px-4 py-2 rounded-full bg-brand-900 hover:bg-brand-800 text-white text-xs font-semibold shadow-sm flex items-center gap-2"><i data-lucide="layers" class="w-3.5 h-3.5"></i><span data-i18n="pile"></span></button>
+        </div>
+      </div>
+      <div id="uploadPreviewContainer" class="hidden flex-col items-center">
+        <div class="relative w-72 h-56 rounded-2xl overflow-hidden border border-stone-200 shadow-sm bg-stone-100 mb-4 flex items-center justify-center">
+          <img id="previewImage" src="" alt="" class="w-full h-full object-cover hidden" />
+          <div id="previewIcon" class="hidden w-16 h-16 rounded-2xl bg-brand-100 text-brand-800 items-center justify-center">
+            <span class="picon" data-p="headphones"><i data-lucide="headphones" class="w-8 h-8"></i></span>
+            <span class="picon" data-p="jacket"><i data-lucide="shirt" class="w-8 h-8"></i></span>
+            <span class="picon" data-p="blender"><i data-lucide="blender" class="w-8 h-8"></i></span>
+            <span class="picon" data-p="chair"><i data-lucide="armchair" class="w-8 h-8"></i></span>
+          </div>
+          <button type="button" onclick="resetUpload()" class="absolute top-2 right-2 p-1.5 rounded-full bg-stone-900/70 hover:bg-stone-900 text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+          <div class="absolute bottom-2 left-2 bg-brand-900/80 backdrop-blur-sm text-white text-[11px] px-2.5 py-1 rounded-md font-mono flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3 h-3 text-brand-300"></i><span data-i18n="ready"></span></div>
+        </div>
+        <button type="button" onclick="document.getElementById('fileInput').click()" class="text-xs font-medium text-stone-600 hover:text-stone-900 underline" data-i18n="replace"></button>
+      </div>
+    </div>
+
+    <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-xs font-bold uppercase tracking-wider text-stone-600" data-i18n="note_l"></label>
+          <button type="button" onclick="fillRandomSample()" class="flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-900 transition-colors"><i data-lucide="wand-2" class="w-3 h-3"></i><span data-i18n="fill"></span></button>
+        </div>
+        <input type="text" id="itemCustomNote" placeholder="e.g., Sony WH-1000XM4 (battery drains in 20 min)" class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm outline-none bg-stone-50/50" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5" data-i18n="year_l"></label>
+        <select id="itemAgeSelect" class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm outline-none bg-stone-50/50 text-stone-700">
+          <option>2–3 years</option><option>&lt; 1 year</option><option>4–5 years</option><option>6+ years</option><option data-i18n="unsure"></option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-6 pt-6 border-t border-stone-100">
+      <span class="text-xs font-bold text-stone-500 uppercase tracking-wider block mb-3" data-i18n="samples_k"></span>
+      <div class="flex flex-wrap gap-2.5">
+        <button type="button" onclick="loadSampleItem('headphones')" class="px-3.5 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-medium flex items-center gap-1.5"><i data-lucide="headphones" class="w-3.5 h-3.5"></i><span>Sony WH-1000XM4 · <span data-i18n="smp1"></span></span></button>
+        <button type="button" onclick="loadSampleItem('jacket')" class="px-3.5 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-medium flex items-center gap-1.5"><i data-lucide="shirt" class="w-3.5 h-3.5"></i><span data-i18n="smp2"></span></button>
+        <button type="button" onclick="loadSampleItem('blender')" class="px-3.5 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-medium flex items-center gap-1.5"><i data-lucide="blender" class="w-3.5 h-3.5"></i><span data-i18n="smp3"></span></button>
+        <button type="button" onclick="loadSampleItem('chair')" class="px-3.5 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-medium flex items-center gap-1.5"><i data-lucide="armchair" class="w-3.5 h-3.5"></i><span data-i18n="smp4"></span></button>
+      </div>
+    </div>
+
+    <div class="mt-8 flex items-center justify-between gap-4">
+      <span class="text-xs text-stone-600 flex items-center gap-1.5"><i data-lucide="lock" class="w-3.5 h-3.5"></i><span data-i18n="privacy"></span></span>
+      <button id="btnStartAnalysis" onclick="startAIAnalysis()" disabled class="px-8 py-3.5 rounded-full bg-brand-900 disabled:bg-stone-300 text-white font-bold text-sm transition-all shadow-subtle disabled:cursor-not-allowed flex items-center gap-2">
+        <span data-i18n="an_btn"></span><i data-lucide="sparkles" class="w-4 h-4 text-brand-300"></i>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: SCANNING ============ -->
+<section id="screen-ai-scanning" class="screen-view hidden py-16 max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="bg-white rounded-3xl p-8 sm:p-12 border border-stone-200/80 shadow-premium text-center space-y-8">
+    <div class="relative mx-auto w-44 h-44 rounded-3xl bg-stone-100 border border-stone-200 items-center justify-center overflow-hidden flex">
+      <span class="picon" data-p="headphones"><i data-lucide="headphones" class="w-16 h-16 text-stone-500"></i></span>
+      <span class="picon" data-p="jacket"><i data-lucide="shirt" class="w-16 h-16 text-stone-500"></i></span>
+      <span class="picon" data-p="blender"><i data-lucide="blender" class="w-16 h-16 text-stone-500"></i></span>
+      <span class="picon" data-p="chair"><i data-lucide="armchair" class="w-16 h-16 text-stone-500"></i></span>
+      <div class="absolute inset-x-6 top-6 h-0.5 bg-gradient-to-r from-transparent via-brand-500 to-transparent animate-scan"></div>
+    </div>
+    <div>
+      <span class="text-xs font-bold uppercase tracking-widest text-brand-700" data-i18n="sc_k"></span>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-brand-950 mt-1" data-i18n="sc_t"></h2>
+    </div>
+    <div class="max-w-sm mx-auto w-full space-y-3" id="scanSteps"></div>
+    <button id="scanGo" onclick="navigateTo('results')" class="hidden mx-auto px-8 py-3.5 rounded-full bg-brand-900 hover:bg-brand-800 text-white font-bold text-sm shadow-subtle rise" data-i18n="sc_go"></button>
+  </div>
+</section>
+
+<!-- ============ SCREEN: RESULTS (VERDICT) ============ -->
+<section id="screen-results" class="screen-view hidden py-12 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+  <button onclick="navigateTo('my-items')" class="flex items-center gap-1 text-sm font-semibold text-brand-800 hover:text-brand-950 mb-6"><i data-lucide="chevron-left" class="w-4 h-4"></i><span data-i18n="nav_items"></span></button>
+
+  <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+    <div>
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-11 h-11 rounded-xl bg-brand-100 text-brand-800 flex items-center justify-center">
+          <span class="picon" data-p="headphones"><i data-lucide="headphones" class="w-5 h-5"></i></span>
+          <span class="picon" data-p="jacket"><i data-lucide="shirt" class="w-5 h-5"></i></span>
+          <span class="picon" data-p="blender"><i data-lucide="blender" class="w-5 h-5"></i></span>
+          <span class="picon" data-p="chair"><i data-lucide="armchair" class="w-5 h-5"></i></span>
+        </div>
+        <div><div id="vName" class="text-sm font-bold text-stone-900">Sony WH-1000XM4</div><div class="text-xs text-stone-500" data-i18n="rs_meta"></div></div>
+      </div>
+      <h1 id="vHeadline" class="text-4xl sm:text-5xl font-extrabold tracking-tight text-brand-950">Battery degraded.</h1>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <div class="lg:col-span-4 space-y-5 lg:sticky lg:top-28">
+      <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle">
+        <div class="flex items-center gap-4">
+          <div class="relative w-[78px] h-[78px] flex-shrink-0">
+            <svg width="78" height="78" viewBox="0 0 78 78"><circle class="ring-track" cx="39" cy="39" r="32"/><circle class="ring-fill" id="ringFill" cx="39" cy="39" r="32" transform="rotate(-90 39 39)"/></svg>
+            <div class="absolute inset-0 flex items-center justify-center gap-0.5"><b id="certNum" class="text-xl font-extrabold">65</b><span class="text-xs font-semibold text-stone-500 mt-1">%</span></div>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-1.5" data-i18n="cert_k"></div>
+            <div id="hypMain" class="text-[13px] font-semibold flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-600 flex-shrink-0"></span><span id="hypMainTxt"></span></div>
+            <div id="hypAlt" class="text-[13px] text-stone-500 flex items-center gap-2 mt-1"><span class="w-1.5 h-1.5 rounded-full bg-stone-300 flex-shrink-0"></span><span id="hypAltTxt"></span></div>
+          </div>
+        </div>
+        <button id="verifyBtn" onclick="if(!S.verified)openModal('m-verify')" class="mt-5 w-full px-5 py-3 rounded-full bg-brand-900 hover:bg-brand-800 text-white font-bold text-sm shadow-subtle transition-all"></button>
+      </div>
+
+      <div id="safetyCard" class="rounded-3xl p-5">
+        <div id="safetyT" class="flex items-center gap-2 text-amber-800 font-bold text-sm"><i data-lucide="wrench" class="w-4 h-4"></i><span id="safetyTT"></span></div>
+        <p id="safetyS" class="text-xs mt-1.5 leading-relaxed"></p>
+      </div>
+
+      <div class="bg-white rounded-3xl p-5 border border-stone-200/80 shadow-subtle">
+        <div class="text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-3" data-i18n="routes_k"></div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="setRoute('repair')" class="route-btn inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all bg-white border-stone-300 text-stone-600" data-r="repair"><span class="rdot w-1.5 h-1.5 rounded-full bg-amber-500"></span><i data-lucide="wrench" class="w-4 h-4"></i><span data-i18n="r_repair"></span></button>
+          <button onclick="setRoute('sell')" class="route-btn inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all bg-white border-stone-300 text-stone-600" data-r="sell"><span class="rdot w-1.5 h-1.5 rounded-full bg-amber-500"></span><i data-lucide="indian-rupee" class="w-4 h-4"></i><span data-i18n="r_sell"></span></button>
+          <button onclick="setRoute('donate')" class="route-btn inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all bg-white border-stone-300 text-stone-600" data-r="donate"><span class="rdot w-1.5 h-1.5 rounded-full bg-amber-500"></span><i data-lucide="heart" class="w-4 h-4"></i><span data-i18n="r_donate"></span></button>
+          <button onclick="setRoute('reuse')" class="route-btn inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all bg-white border-stone-300 text-stone-600" data-r="reuse"><span class="rdot w-1.5 h-1.5 rounded-full bg-amber-500"></span><i data-lucide="repeat" class="w-4 h-4"></i><span data-i18n="r_reuse"></span></button>
+          <button onclick="setRoute('recycle')" class="route-btn inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all bg-white border-stone-300 text-stone-600" data-r="recycle"><span class="rdot w-1.5 h-1.5 rounded-full bg-amber-500"></span><i data-lucide="recycle" class="w-4 h-4"></i><span data-i18n="r_recycle"></span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-8 space-y-5">
+
+      <!-- REPAIR -->
+      <div class="panel" id="pnl-repair">
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2 font-bold text-brand-950"><i data-lucide="shield-check" class="w-5 h-5 text-brand-600"></i><span data-i18n="fps_t"></span></div>
+            <span id="fpsMeta" class="text-[11px] font-mono text-stone-500 bg-stone-100 px-2 py-1 rounded-md"></span>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <label for="quoteInput" class="text-xs font-bold uppercase tracking-wider text-stone-600" data-i18n="quote_k"></label>
+            <button onclick="toast(t('t_doc'))" class="text-xs text-stone-500 hover:text-stone-800 underline" data-i18n="upload"></button>
+          </div>
+          <div class="flex items-center gap-1 h-12 px-4 rounded-xl border border-stone-300 bg-stone-50/60 mt-2 focus-within:border-brand-500">
+            <span class="text-stone-400 font-semibold">₹</span>
+            <input id="quoteInput" inputmode="numeric" autocomplete="off" value="850" class="flex-grow bg-transparent outline-none font-bold text-stone-900" style="font-variant-numeric:tabular-nums" />
+          </div>
+          <div id="presetWrap" class="flex gap-2 mt-3 flex-wrap"></div>
+
+          <div class="gauge mt-10" id="gauge">
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <span id="vPill" class="px-2.5 py-1 rounded-full text-xs font-bold"></span>
+              <span id="vDelta" class="text-xs text-stone-500"></span>
+            </div>
+            <div class="relative mt-9">
+              <div class="g-track"><div class="g-band" id="gBand"></div><div class="g-marker" id="gMarker"></div><div class="g-flag" id="gFlag">₹850</div></div>
+              <div id="gScale" class="g-scale relative mt-2.5 text-[11px] text-stone-400"></div>
+            </div>
+          </div>
+
+          <div class="mt-5 pt-4 border-t border-stone-100">
+            <button onclick="document.getElementById('provWrap').classList.toggle('open')" class="w-full flex items-center justify-between text-xs text-stone-500 hover:text-stone-800 font-medium">
+              <span id="provLbl"></span><i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </button>
+            <div id="provWrap" class="grow"><div>
+              <div class="flex justify-between text-xs text-stone-500 py-2 border-b border-stone-100"><span id="pr1"></span><b id="pr1v" class="text-stone-800"></b></div>
+              <div class="flex justify-between text-xs text-stone-500 py-2 border-b border-stone-100"><span id="pr2"></span><b id="pr2v" class="text-stone-800"></b></div>
+              <div class="flex justify-between text-xs text-stone-500 py-2 border-b border-stone-100"><span data-i18n="pr3"></span><b class="text-stone-800" id="qcCount">41</b></div>
+              <div class="flex justify-between text-xs text-stone-500 py-2"><span data-i18n="pr4"></span><b class="text-stone-800">2 wks</b></div>
+            </div></div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
+          <div class="flex items-center justify-between mb-2"><div class="font-bold text-brand-950" data-i18n="ror_t"></div><span class="text-[11px] font-mono text-stone-500" data-i18n="cap60"></span></div>
+          <div class="relative mt-8" id="bars">
+            <div class="absolute -top-5 bottom-0 border-l-2 border-dashed border-stone-400" id="beLine"><span id="beLbl" class="absolute -top-4 left-1.5 text-[10px] text-stone-500 whitespace-nowrap"></span></div>
+            <div class="grid grid-cols-[140px_1fr_76px] gap-3 items-center py-1.5 text-sm"><span class="text-stone-500 text-xs" data-i18n="l_work"></span><div class="h-2 rounded-full bg-stone-100 overflow-hidden"><div class="h-full rounded-full bg-brand-900" style="width:100%"></div></div><b id="barWorkV" class="text-right">₹14,500</b></div>
+            <div class="grid grid-cols-[140px_1fr_76px] gap-3 items-center py-1.5 text-sm"><span class="text-stone-500 text-xs" data-i18n="l_q"></span><div class="h-2 rounded-full bg-stone-100 overflow-hidden"><div id="qFill" class="h-full rounded-full bg-amber-500" style="width:5.9%"></div></div><b id="qVal" class="text-right">₹850</b></div>
+            <div class="grid grid-cols-[140px_1fr_76px] gap-3 items-center py-1.5 text-sm"><span class="text-stone-500 text-xs" data-i18n="l_asis"></span><div class="h-2 rounded-full bg-stone-100 overflow-hidden"><div id="barAsisF" class="h-full rounded-full bg-stone-300" style="width:46.9%"></div></div><b id="barAsisV" class="text-right">₹6,800</b></div>
+            <div class="grid grid-cols-[140px_1fr_76px] gap-3 items-center py-1.5 text-sm"><span class="text-stone-500 text-xs" data-i18n="l_scrap"></span><div class="h-2 rounded-full bg-stone-100 overflow-hidden"><div id="barScrapF" class="h-full rounded-full bg-stone-200" style="width:9.7%"></div></div><b id="barScrapV" class="text-right">₹1,400</b></div>
+          </div>
+          <p id="netLine" class="text-xs text-stone-500 mt-4 leading-relaxed"></p>
+          <div id="alertCard" class="hidden mt-4 rounded-2xl bg-amber-50 border border-amber-200/70 p-4">
+            <div class="flex items-center gap-2 font-bold text-amber-900 text-sm"><i data-lucide="triangle-alert" class="w-4 h-4"></i><span data-i18n="alert_t"></span></div>
+            <p id="alertBody" class="text-xs text-amber-900/75 mt-2 leading-relaxed"></p>
+            <div class="flex gap-4 mt-2">
+              <button onclick="setRoute('sell')" class="text-sm font-bold text-brand-800 hover:underline" data-i18n="see_sell"></button>
+              <button onclick="S.alertOff=true;setQuote(S.quote)" class="text-sm font-semibold text-stone-500 hover:text-stone-800" data-i18n="keep_repair"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle">
+            <div class="font-bold text-brand-950 mb-3" data-i18n="ask_t"></div>
+            <div class="space-y-2.5 text-[13px] text-stone-600 leading-relaxed">
+              <div class="flex gap-2.5"><b class="text-stone-400">1</b><span id="ask1"></span></div>
+              <div class="flex gap-2.5"><b class="text-stone-400">2</b><span id="ask2"></span></div>
+              <div class="flex gap-2.5"><b class="text-stone-400">3</b><span id="ask3"></span></div>
+            </div>
+          </div>
+          <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle">
+            <div class="font-bold text-brand-950 mb-2" data-i18n="shops_t"></div>
+            <div class="divide-y divide-stone-100 text-sm">
+              <button onclick="navigateTo('compare')" class="w-full flex justify-between items-center py-2.5 text-left hover:text-brand-800"><span><b id="shopAn" class="block"></b><span id="shopAs" class="text-xs text-stone-500"></span></span><span class="text-xs text-stone-500">0.9 km</span></button>
+              <button onclick="navigateTo('compare')" class="w-full flex justify-between items-center py-2.5 text-left hover:text-brand-800"><span><b id="shopBn" class="block"></b><span id="shopBs" class="text-xs text-stone-500"></span></span><span class="text-xs text-stone-500">1.4 km</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SELL -->
+      <div class="panel hidden" id="pnl-sell">
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
+          <div class="flex items-center justify-between mb-4"><div class="font-bold text-brand-950" data-i18n="rank_t"></div><span class="text-[11px] font-mono text-stone-500" data-i18n="rank_s"></span></div>
+          <div class="divide-y divide-stone-100">
+            <div class="flex items-center gap-3.5 py-3.5" id="sellR1"><span class="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center text-stone-600"><i data-lucide="users" class="w-4 h-4"></i></span><div class="flex-grow"><b class="block text-sm" data-i18n="ch1_n"></b><span class="text-xs text-stone-500" data-i18n="ch1_s"></span></div><div class="text-right"><b class="block" id="sellV1">₹6,800</b><span class="text-[11px] text-stone-500" data-i18n="tv1"></span></div></div>
+            <div class="flex items-center gap-3.5 py-3.5" id="sellR2"><span class="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center text-stone-600"><i data-lucide="zap" class="w-4 h-4"></i></span><div class="flex-grow"><b class="block text-sm" data-i18n="ch2_n"></b><span class="text-xs text-stone-500" data-i18n="ch2_s"></span></div><div class="text-right"><b class="block" id="sellV2">₹5,200</b><span class="text-[11px] text-stone-500" data-i18n="tv2"></span></div></div>
+            <div class="flex items-center gap-3.5 py-3.5" id="sellR3"><span class="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center text-stone-600"><i data-lucide="store" class="w-4 h-4"></i></span><div class="flex-grow"><b class="block text-sm" data-i18n="ch3_n"></b><span class="text-xs text-stone-500" data-i18n="ch3_s"></span></div><div class="text-right"><b class="block" id="sellV3">₹4,900</b><span class="text-[11px] text-stone-500" data-i18n="tv3"></span></div></div>
+            <div class="flex items-center gap-3.5 py-3.5" id="sellR4"><span class="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center text-stone-600"><i data-lucide="arrow-right-left" class="w-4 h-4"></i></span><div class="flex-grow"><b class="block text-sm" data-i18n="ch4_n"></b><span class="text-xs text-stone-500" data-i18n="ch4_s"></span></div><div class="text-right"><b class="block" id="sellV4">₹4,500</b><span class="text-[11px] text-stone-500" data-i18n="tv4"></span></div></div>
+            <div class="h-px bg-stone-300 my-1"></div>
+            <div class="flex items-center gap-3.5 py-3.5 opacity-60" id="sellR5"><span class="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center text-stone-600"><i data-lucide="scale" class="w-4 h-4"></i></span><div class="flex-grow"><b class="block text-sm" data-i18n="ch5_n"></b><span class="text-xs text-stone-500" data-i18n="ch5_s"></span></div><div class="text-right"><b class="block" id="sellV5">₹120</b></div></div>
+          </div>
+        </div>
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
+          <div class="flex items-center gap-2 font-bold text-brand-950 mb-1"><i data-lucide="shield-alert" class="w-5 h-5 text-amber-600"></i><span data-i18n="scam_t"></span></div>
+          <div class="py-4 border-b border-stone-100">
+            <b class="text-sm" data-i18n="scam1_t"></b>
+            <div class="bg-stone-100 rounded-2xl p-3.5 text-[13px] italic text-stone-600 mt-2.5">"Bhai urgent — army posting par hoon, call nahi ho payega. QR bheja hai, scan kar do, gadi turant bhej dunga."</div>
+            <p class="text-xs text-stone-600 mt-2.5 font-medium" data-i18n="scam1_v"></p>
+          </div>
+          <div class="py-4">
+            <b class="text-sm" data-i18n="scam2_t"></b>
+            <p class="text-xs text-stone-600 mt-2 leading-relaxed" data-i18n="scam2_v"></p>
+          </div>
+        </div>
+        <button onclick="openModal('m-listing')" class="px-6 py-3.5 rounded-full bg-brand-900 hover:bg-brand-800 text-white font-bold text-sm shadow-subtle flex items-center gap-2"><i data-lucide="clipboard-list" class="w-4 h-4 text-brand-300"></i><span data-i18n="gen_cta"></span></button>
+      </div>
+
+      <!-- DONATE -->
+      <div class="panel hidden" id="pnl-donate">
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div class="font-bold text-brand-950" data-i18n="gate_t"></div>
+              <button onclick="fillGate()" class="flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-900 transition-colors"><i data-lucide="wand-2" class="w-3 h-3"></i><span data-i18n="fill"></span></button>
+            </div>
+            <span id="dgMeta" class="text-xs font-mono text-stone-500">0 / 3</span>
+          </div>
+          <div id="gateWrap"></div>
+          <button id="donateBtn" onclick="donateGateClick()" class="mt-4 w-full px-5 py-3 rounded-full text-white font-bold text-sm transition-all"></button>
+        </div>
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
+          <div class="flex items-center justify-between mb-2"><div class="font-bold text-brand-950" data-i18n="ngo_t"></div><span class="text-[11px] font-mono text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md">VERIFIED</span></div>
+          <div class="divide-y divide-stone-100 text-sm">
+            <div class="py-3.5"><b class="block">Anand Vidyalaya</b><span id="ng1s" class="text-xs text-stone-500"></span></div>
+            <div class="py-3.5"><b class="block">Snehalaya children's home</b><span id="ng2s" class="text-xs text-stone-500"></span></div>
+          </div>
+        </div>
+        <button onclick="setRoute('reuse')" class="block mx-auto text-sm text-stone-500 hover:text-stone-800" data-i18n="keep_cta"></button>
+      </div>
+
+      <!-- REUSE -->
+      <div class="panel hidden" id="pnl-reuse">
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
+          <div class="flex items-center justify-between mb-4"><div class="font-bold text-brand-950" data-i18n="pb_t"></div><span class="text-[11px] font-mono text-stone-500" data-i18n="pb_s"></span></div>
+          <div id="ideaWrap"></div>
+        </div>
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
+          <div class="font-bold text-brand-950 mb-1" data-i18n="trades_t"></div>
+          <div class="divide-y divide-stone-100 text-sm text-stone-600">
+            <div class="flex items-center gap-2.5 py-2.5"><i data-lucide="scissors" class="w-4 h-4 text-stone-400"></i><span data-i18n="tr1"></span></div>
+            <div class="flex items-center gap-2.5 py-2.5"><i data-lucide="hammer" class="w-4 h-4 text-stone-400"></i><span data-i18n="tr2"></span></div>
+            <div class="flex items-center gap-2.5 py-2.5"><i data-lucide="footprints" class="w-4 h-4 text-stone-400"></i><span data-i18n="tr3"></span></div>
+          </div>
+        </div>
+        <div class="rounded-3xl p-7 bg-[#F7F2E8] border border-[#E8E0CD]">
+          <div class="text-[10px] font-bold uppercase tracking-widest text-[#8A7B57] mb-2.5" data-i18n="vault_t"></div>
+          <div class="text-2xl font-bold text-stone-900" style="font-family:Georgia,serif" data-i18n="vault_h"></div>
+          <p class="text-sm italic text-stone-700/80 mt-2" style="font-family:Georgia,serif" data-i18n="vault_i"></p>
+          <span class="inline-block border border-[#D8CFB4] text-[#6F6041] text-xs font-medium px-2.5 py-1 rounded-full mt-3" data-i18n="vchip"></span>
+          <p class="text-xs text-[#8A7B57] mt-4" data-i18n="vault_cap"></p>
+        </div>
+      </div>
+
+      <!-- RECYCLE -->
+      <div class="panel hidden" id="pnl-recycle">
+        <div class="bg-white rounded-3xl border border-stone-200/80 shadow-subtle overflow-hidden">
+          <div class="p-6 pb-4"><div class="font-bold text-brand-950" data-i18n="rc_t"></div></div>
+          <div class="divide-y divide-stone-100 text-sm">
+            <div class="flex items-center gap-3 px-6 py-3.5"><span class="w-2.5 h-2.5 rounded-full bg-brand-900"></span><span class="flex-grow font-semibold">Green Vision Recyclers</span><span class="text-[11px] font-bold text-brand-800 bg-brand-50 px-2 py-0.5 rounded-md">CPCB</span><span class="text-xs text-stone-500">1.8 km</span></div>
+            <div class="flex items-center gap-3 px-6 py-3.5"><span class="w-2.5 h-2.5 rounded-full border-2 border-stone-800 bg-white"></span><span class="flex-grow font-semibold">Croma</span><span class="text-[11px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md">battery bin</span><span class="text-xs text-stone-500">2.4 km</span></div>
+            <div class="flex items-center gap-3 px-6 py-3.5"><span class="w-2.5 h-2.5 rounded-full border-2 border-stone-800 bg-white"></span><span class="flex-grow font-semibold">Reliance Digital</span><span class="text-[11px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md">battery bin</span><span class="text-xs text-stone-500">3.1 km</span></div>
+            <div class="flex items-center gap-3 px-6 py-3.5"><span class="w-2.5 h-2.5 rounded-sm border-2 border-stone-800 bg-white"></span><span class="flex-grow font-semibold">ScrapUncle</span><span class="text-[11px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md">free pickup</span><span class="text-xs text-stone-500">—</span></div>
+          </div>
+        </div>
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
+          <div class="flex items-center justify-between mb-4"><div class="font-bold text-brand-950" data-i18n="split_t"></div><span class="text-[11px] font-mono text-stone-500" data-i18n="split_s"></span></div>
+          <div class="grid grid-cols-2 gap-6">
+            <div><div class="text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-2" data-i18n="safe_k"></div>
+              <div class="space-y-1.5 text-[13px] text-stone-600"><div class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i><span data-i18n="sp1"></span></div><div class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i><span data-i18n="sp2"></span></div><div class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i><span data-i18n="sp3"></span></div></div>
+            </div>
+            <div><div class="text-[10px] font-bold uppercase tracking-widest text-stone-500 mb-2" data-i18n="auth_k"></div>
+              <div class="space-y-1.5 text-[13px] text-stone-600"><div class="flex items-center gap-2"><i data-lucide="flame" class="w-3.5 h-3.5 text-red-600"></i><span data-i18n="sp4"></span></div><div class="flex items-center gap-2"><i data-lucide="triangle-alert" class="w-3.5 h-3.5 text-red-600"></i><span data-i18n="sp5"></span></div></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between pt-4 mt-5 border-t border-stone-100">
+            <span class="text-sm font-medium" data-i18n="bag_t"></span>
+            <label class="sw"><input type="checkbox" id="bagSw" onchange="document.getElementById('hzWrap').classList.toggle('open',this.checked)"><span class="knob"></span></label>
+          </div>
+          <div id="hzWrap" class="grow"><div>
+            <div class="flex gap-3 bg-red-50 border border-red-200/70 rounded-2xl p-4 mt-4">
+              <i data-lucide="flame" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"></i>
+              <div><b class="block text-sm text-red-900" data-i18n="hz_t"></b><p class="text-xs text-red-900/75 mt-1.5 leading-relaxed" data-i18n="hz_b"></p><button class="text-xs font-bold text-brand-800 hover:underline mt-1.5" data-i18n="hz_link"></button></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: COMPARE ============ -->
+<section id="screen-compare" class="screen-view hidden py-12 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="mb-10">
+    <span class="text-xs font-bold uppercase tracking-widest text-brand-700" data-i18n="cp_k"></span>
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-brand-950 mt-1" data-i18n="cp_t"></h1>
+    <p class="text-stone-600 text-sm mt-2" data-i18n="cp_s"></p>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div class="bg-white rounded-2xl p-5 border border-stone-200/80 shadow-subtle"><i data-lucide="wrench" class="w-5 h-5 text-emerald-700"></i><b class="block mt-3" data-i18n="r_repair"></b><div class="text-lg font-extrabold mt-1"><span id="cpRepair">₹850</span> <span class="text-xs font-medium text-stone-500" data-i18n="cp_cost"></span></div><p id="cp1s" class="text-xs text-stone-500 mt-1.5 leading-relaxed"></p></div>
+    <div class="bg-white rounded-2xl p-5 border border-stone-200/80 shadow-subtle"><i data-lucide="tag" class="w-5 h-5 text-amber-700"></i><b class="block mt-3" data-i18n="r_sell"></b><div class="text-lg font-extrabold mt-1"><span id="cpSell">₹6,800</span> <span class="text-xs font-medium text-stone-500" data-i18n="cp_net"></span></div><p class="text-xs text-stone-500 mt-1.5 leading-relaxed" data-i18n="cp2_s"></p></div>
+    <div class="bg-white rounded-2xl p-5 border border-stone-200/80 shadow-subtle"><i data-lucide="heart" class="w-5 h-5 text-sky-700"></i><b class="block mt-3" data-i18n="r_donate"></b><div class="text-lg font-extrabold mt-1" id="cpDonate">School AV</div><p class="text-xs text-stone-500 mt-1.5 leading-relaxed" data-i18n="cp3_s"></p></div>
+    <div class="bg-white rounded-2xl p-5 border border-stone-200/80 shadow-subtle"><i data-lucide="repeat" class="w-5 h-5 text-purple-700"></i><b class="block mt-3" data-i18n="r_reuse"></b><div class="text-lg font-extrabold mt-1">₹0</div><p class="text-xs text-stone-500 mt-1.5 leading-relaxed" data-i18n="cp4_s"></p></div>
+    <div class="bg-white rounded-2xl p-5 border border-stone-200/80 shadow-subtle"><i data-lucide="recycle" class="w-5 h-5 text-stone-700"></i><b class="block mt-3" data-i18n="r_recycle"></b><div class="text-lg font-extrabold mt-1" id="cpRecycle">₹1,400</div><p class="text-xs text-stone-500 mt-1.5 leading-relaxed" data-i18n="cp5_s"></p></div>
+  </div>
+  <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-brand-950 text-white rounded-2xl p-6"><b class="block" data-i18n="cp_rule_t"></b><p id="cpRules" class="text-sm text-stone-300 mt-2 leading-relaxed"></p></div>
+    <div class="bg-white rounded-2xl p-6 border border-stone-200/80"><b class="block" data-i18n="cp_kab_t"></b><p id="cpKabs" class="text-sm text-stone-600 mt-2 leading-relaxed"></p></div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: REUSE STUDIO ============ -->
+<section id="screen-reuse-gallery" class="screen-view hidden py-12 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="flex flex-col md:flex-row md:items-end justify-between mb-10">
+    <div><span class="text-xs font-bold uppercase tracking-widest text-purple-800" data-i18n="ru_k"></span><h1 class="text-3xl sm:text-4xl font-extrabold text-stone-900 mt-1" data-i18n="ru_t"></h1><p class="text-stone-600 text-sm mt-2" data-i18n="ru_s"></p></div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white rounded-3xl overflow-hidden border border-stone-200/80 shadow-subtle flex flex-col">
+      <div class="h-44 bg-stone-100 p-4 grid grid-cols-2 gap-3">
+        <div class="bg-stone-200/70 rounded-xl p-3 flex flex-col justify-between items-center text-center"><span class="text-[10px] font-bold uppercase text-stone-500 bg-white/70 px-2 py-0.5 rounded">Before</span><i data-lucide="shirt" class="w-9 h-9 text-stone-500"></i><span class="text-[11px] text-stone-600 font-medium" data-i18n="ru1_b"></span></div>
+        <div class="bg-purple-100/60 rounded-xl p-3 flex flex-col justify-between items-center text-center border border-purple-200"><span class="text-[10px] font-bold uppercase text-purple-700 bg-purple-50 px-2 py-0.5 rounded">After</span><i data-lucide="shopping-bag" class="w-9 h-9 text-purple-700"></i><span class="text-[11px] text-purple-900 font-bold" data-i18n="ru1_a"></span></div>
+      </div>
+      <div class="p-5 flex flex-col flex-grow"><div class="flex gap-2 text-[11px] text-stone-500 mb-2"><span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i>20 min</span><span>·</span><span data-i18n="ru_nosew"></span></div>
+        <h4 class="font-bold text-stone-900 text-sm mb-1" data-i18n="ru1_t"></h4><p class="text-xs text-stone-600 leading-relaxed mb-4" data-i18n="ru1_s"></p>
+        <button onclick="openReuseModal('tshirt')" class="mt-auto text-xs font-bold text-brand-800 hover:text-brand-950 flex items-center gap-1"><span data-i18n="ru_guide"></span><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+      </div>
+    </div>
+    <div class="bg-white rounded-3xl overflow-hidden border border-stone-200/80 shadow-subtle flex flex-col">
+      <div class="h-44 bg-stone-100 p-4 grid grid-cols-2 gap-3">
+        <div class="bg-stone-200/70 rounded-xl p-3 flex flex-col justify-between items-center text-center"><span class="text-[10px] font-bold uppercase text-stone-500 bg-white/70 px-2 py-0.5 rounded">Before</span><i data-lucide="package" class="w-9 h-9 text-stone-500"></i><span class="text-[11px] text-stone-600 font-medium" data-i18n="ru2_b"></span></div>
+        <div class="bg-emerald-100/60 rounded-xl p-3 flex flex-col justify-between items-center text-center border border-emerald-200"><span class="text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">After</span><i data-lucide="sprout" class="w-9 h-9 text-emerald-700"></i><span class="text-[11px] text-emerald-900 font-bold" data-i18n="ru2_a"></span></div>
+      </div>
+      <div class="p-5 flex flex-col flex-grow"><div class="flex gap-2 text-[11px] text-stone-500 mb-2"><span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i>35 min</span><span>·</span><span data-i18n="ru_beg"></span></div>
+        <h4 class="font-bold text-stone-900 text-sm mb-1" data-i18n="ru2_t"></h4><p class="text-xs text-stone-600 leading-relaxed mb-4" data-i18n="ru2_s"></p>
+        <button onclick="openReuseModal('crate')" class="mt-auto text-xs font-bold text-brand-800 hover:text-brand-950 flex items-center gap-1"><span data-i18n="ru_guide"></span><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+      </div>
+    </div>
+    <div class="bg-white rounded-3xl overflow-hidden border border-stone-200/80 shadow-subtle flex flex-col">
+      <div class="h-44 bg-stone-100 p-4 grid grid-cols-2 gap-3">
+        <div class="bg-stone-200/70 rounded-xl p-3 flex flex-col justify-between items-center text-center"><span class="text-[10px] font-bold uppercase text-stone-500 bg-white/70 px-2 py-0.5 rounded">Before</span><i data-lucide="coffee" class="w-9 h-9 text-stone-500"></i><span class="text-[11px] text-stone-600 font-medium" data-i18n="ru3_b"></span></div>
+        <div class="bg-amber-100/60 rounded-xl p-3 flex flex-col justify-between items-center text-center border border-amber-200"><span class="text-[10px] font-bold uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded">After</span><i data-lucide="pen-tool" class="w-9 h-9 text-amber-700"></i><span class="text-[11px] text-amber-900 font-bold" data-i18n="ru3_a"></span></div>
+      </div>
+      <div class="p-5 flex flex-col flex-grow"><div class="flex gap-2 text-[11px] text-stone-500 mb-2"><span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i>15 min</span><span>·</span><span data-i18n="ru_easy"></span></div>
+        <h4 class="font-bold text-stone-900 text-sm mb-1" data-i18n="ru3_t"></h4><p class="text-xs text-stone-600 leading-relaxed mb-4" data-i18n="ru3_s"></p>
+        <button onclick="openReuseModal('tin')" class="mt-auto text-xs font-bold text-brand-800 hover:text-brand-950 flex items-center gap-1"><span data-i18n="ru_guide"></span><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: MY ITEMS ============ -->
+<section id="screen-my-items" class="screen-view hidden py-12 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-brand-950" data-i18n="items_t"></h1>
+    <div class="flex items-center bg-stone-200/40 p-1 rounded-full border border-stone-200/70 text-sm font-semibold">
+      <button onclick="setItemsSeg('all')" class="iseg px-4 py-1.5 rounded-full" data-s="all" data-i18n="seg_all"></button>
+      <button onclick="setItemsSeg('vault')" class="iseg px-4 py-1.5 rounded-full" data-s="vault" data-i18n="seg_vault"></button>
+      <button onclick="setItemsSeg('proofs')" class="iseg px-4 py-1.5 rounded-full" data-s="proofs" data-i18n="seg_proofs"></button>
+    </div>
+  </div>
+  <p class="text-sm text-stone-500 mb-5" data-i18n="items_sum"></p>
+
+  <div id="items-all" class="ipane bg-white rounded-3xl border border-stone-200/80 shadow-subtle divide-y divide-stone-100">
+    <button onclick="loadProfile('headphones',{jump:true})" class="w-full flex items-center gap-4 p-4 text-left hover:bg-stone-50"><span class="w-11 h-11 rounded-xl bg-brand-100 text-brand-800 flex items-center justify-center"><i data-lucide="headphones" class="w-5 h-5"></i></span><span class="flex-grow"><b class="block text-sm">Sony WH-1000XM4</b><span class="text-xs text-stone-500" data-i18n="it1_s"></span></span><span class="text-right hidden sm:block"><b class="block text-sm">₹6,800</b><span class="text-[11px] text-stone-500" data-i18n="it_ready"></span></span><i data-lucide="chevron-right" class="w-4 h-4 text-stone-300"></i></button>
+    <button onclick="loadProfile('jacket',{jump:true})" class="w-full flex items-center gap-4 p-4 text-left hover:bg-stone-50"><span class="w-11 h-11 rounded-xl bg-stone-100 text-stone-600 flex items-center justify-center"><i data-lucide="shirt" class="w-5 h-5"></i></span><span class="flex-grow"><b class="block text-sm" data-i18n="it2_n"></b><span class="text-xs text-stone-500" data-i18n="it2_s"></span></span><i data-lucide="chevron-right" class="w-4 h-4 text-stone-300"></i></button>
+    <button onclick="loadProfile('blender',{jump:true})" class="w-full flex items-center gap-4 p-4 text-left hover:bg-stone-50"><span class="w-11 h-11 rounded-xl bg-stone-100 text-stone-600 flex items-center justify-center"><i data-lucide="blender" class="w-5 h-5"></i></span><span class="flex-grow"><b class="block text-sm" data-i18n="it3_n"></b><span class="text-xs text-stone-500" data-i18n="it3_s"></span></span><i data-lucide="chevron-right" class="w-4 h-4 text-stone-300"></i></button>
+    <button onclick="toast(t('t_demo'))" class="w-full flex items-center gap-4 p-4 text-left hover:bg-stone-50"><span class="w-11 h-11 rounded-xl bg-stone-100 text-stone-600 flex items-center justify-center"><i data-lucide="package" class="w-5 h-5"></i></span><span class="flex-grow"><b class="block text-sm" data-i18n="it4_n"></b><span class="text-xs text-stone-500" data-i18n="it4_s"></span></span><span class="text-right hidden sm:block"><b class="block text-sm">₹410</b></span><i data-lucide="chevron-right" class="w-4 h-4 text-stone-300"></i></button>
+    <button onclick="setItemsSeg('vault')" class="w-full flex items-center gap-4 p-4 text-left hover:bg-stone-50"><span class="w-11 h-11 rounded-xl bg-[#F7F2E8] text-[#8A7B57] flex items-center justify-center"><i data-lucide="watch" class="w-5 h-5"></i></span><span class="flex-grow"><b class="block text-sm" data-i18n="it5_n"></b><span class="text-xs text-stone-500" data-i18n="it5_s"></span></span><i data-lucide="chevron-right" class="w-4 h-4 text-stone-300"></i></button>
+  </div>
+
+  <div id="items-vault" class="ipane hidden">
+    <div class="rounded-3xl p-7 bg-[#F7F2E8] border border-[#E8E0CD]">
+      <div class="text-[10px] font-bold uppercase tracking-widest text-[#8A7B57] mb-2.5" data-i18n="vault_t"></div>
+      <div class="text-2xl font-bold text-stone-900" style="font-family:Georgia,serif" data-i18n="vault_h"></div>
+      <p class="text-sm italic text-stone-700/80 mt-2" style="font-family:Georgia,serif" data-i18n="vault_i"></p>
+      <span class="inline-block border border-[#D8CFB4] text-[#6F6041] text-xs font-medium px-2.5 py-1 rounded-full mt-3" data-i18n="vchip"></span>
+      <p class="text-xs text-[#8A7B57] mt-4" data-i18n="vault_cap"></p>
+    </div>
+  </div>
+
+  <div id="items-proofs" class="ipane hidden">
+    <div class="relative pl-6">
+      <div class="absolute left-[5px] top-3 bottom-3 w-0.5 bg-stone-200"></div>
+      <div class="relative flex justify-between items-center gap-4 py-4 border-b border-stone-100"><span class="absolute -left-6 top-6 w-2.5 h-2.5 rounded-full border-2 border-stone-800 bg-[#FAF8F5]"></span><div><b class="block text-sm" data-i18n="pf1_t"></b><span class="text-[11px] text-stone-400">2 weeks ago · PDF</span></div><button onclick="toast(t('t_doc'))" class="text-sm font-bold text-brand-800 hover:underline" data-i18n="pf_view"></button></div>
+      <div class="relative flex justify-between items-center gap-4 py-4 border-b border-stone-100"><span class="absolute -left-6 top-6 w-2.5 h-2.5 rounded-full border-2 border-stone-800 bg-[#FAF8F5]"></span><div><b class="block text-sm" data-i18n="pf2_t"></b><span class="text-[11px] text-stone-400">last month · 3 photos</span></div><button onclick="toast(t('t_doc'))" class="text-sm font-bold text-brand-800 hover:underline" data-i18n="pf_view"></button></div>
+      <div class="relative flex justify-between items-center gap-4 py-4"><span class="absolute -left-6 top-6 w-2.5 h-2.5 rounded-full border-2 border-stone-800 bg-[#FAF8F5]"></span><div><b class="block text-sm" data-i18n="pf3_t"></b><span class="text-[11px] text-stone-400">yesterday · receipt scan</span></div><button onclick="navigateTo('dashboard')" class="text-sm font-bold text-brand-800 hover:underline" data-i18n="pf_view"></button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: IMPACT ============ -->
+<section id="screen-impact" class="screen-view hidden py-12 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-brand-950 mb-2" data-i18n="im_t"></h1>
+  <p class="text-sm text-stone-500 mb-8" data-i18n="im_s"></p>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+    <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle"><div class="text-3xl font-extrabold text-brand-700">12.4 kg</div><div class="text-xs text-stone-500 mt-1" data-i18n="im1"></div></div>
+    <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle"><div class="text-3xl font-extrabold text-brand-700">3</div><div class="text-xs text-stone-500 mt-1" data-i18n="im2"></div></div>
+    <div class="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-subtle"><div class="text-3xl font-extrabold text-brand-700">₹8,650</div><div class="text-xs text-stone-500 mt-1" data-i18n="im3"></div></div>
+  </div>
+  <div class="bg-brand-950 text-white rounded-3xl p-8">
+    <span class="text-xs font-bold uppercase tracking-widest text-brand-300" data-i18n="im_pfk"></span>
+    <div class="mt-4 space-y-3 text-sm">
+      <div class="flex items-start gap-3"><i data-lucide="badge-check" class="w-4 h-4 text-brand-300 mt-0.5"></i><span data-i18n="im_pf1"></span></div>
+      <div class="flex items-start gap-3"><i data-lucide="badge-check" class="w-4 h-4 text-brand-300 mt-0.5"></i><span data-i18n="im_pf2"></span></div>
+      <div class="flex items-start gap-3"><i data-lucide="badge-check" class="w-4 h-4 text-brand-300 mt-0.5"></i><span data-i18n="im_pf3"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN: DASHBOARD → RATE CALIBRATION ============ -->
+<section id="screen-dashboard" class="screen-view hidden py-12 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+  <span class="text-xs font-bold uppercase tracking-widest text-brand-700" data-i18n="db_k"></span>
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-brand-950 mt-1" data-i18n="db_t"></h1>
+  <p class="text-sm text-stone-500 mt-2 mb-8" data-i18n="db_s"></p>
+
+  <div class="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/80 shadow-premium mb-5">
+    <div class="flex items-center gap-2 text-xs font-bold text-brand-800 bg-brand-50 px-3 py-1.5 rounded-full w-fit mb-4"><i data-lucide="message-circle-question" class="w-3.5 h-3.5"></i><span data-i18n="db_askk"></span></div>
+    <h3 id="dbAskT" class="text-lg font-bold text-stone-900"></h3>
+    <p class="text-xs text-stone-500 mt-1 mb-4" data-i18n="db_ask_s"></p>
+    <div class="flex flex-wrap gap-2">
+      <button onclick="calibrated()" class="px-4 py-2 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold">≤ ₹850</button>
+      <button onclick="calibrated()" class="px-4 py-2 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold">₹850 – 1,200</button>
+      <button onclick="calibrated()" class="px-4 py-2 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold">₹1,200 +</button>
+      <button onclick="calibrated()" class="px-4 py-2 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold" data-i18n="db_more"></button>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/80 shadow-subtle">
+    <div class="flex items-center justify-between mb-4"><b class="text-brand-950" data-i18n="db_recent"></b><span class="text-[11px] font-mono text-stone-500" data-i18n="db_fresh"></span></div>
+    <div class="divide-y divide-stone-100 text-sm">
+      <div class="py-3 flex items-center gap-3"><i data-lucide="battery-charging" class="w-4 h-4 text-stone-400"></i><span class="flex-grow" data-i18n="db_r1"></span><span class="text-xs text-stone-500">₹900 → <b class="text-stone-800">₹850</b></span></div>
+      <div class="py-3 flex items-center gap-3"><i data-lucide="scissors" class="w-4 h-4 text-stone-400"></i><span class="flex-grow" data-i18n="db_r2"></span><span class="text-xs text-stone-500">₹150 → <b class="text-stone-800">₹150</b></span></div>
+      <div class="py-3 flex items-center gap-3"><i data-lucide="plug" class="w-4 h-4 text-stone-400"></i><span class="flex-grow" data-i18n="db_r3"></span><span class="text-xs text-stone-500">₹1,400 → <b class="text-stone-800">₹1,100</b></span></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="border-t border-stone-200/70 bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-wrap justify-between items-center gap-3 text-xs text-stone-500">
+    <span class="font-bold text-brand-950 tracking-tight">REKART<span class="w-1 h-1 rounded-full bg-brand-500 inline-block ml-1 align-middle"></span></span>
+    <span data-i18n="foot_r"></span>
+  </div>
+</footer>
+
+<!-- ============ DEMO DATA FAB (remove this block for production) ============ -->
+<div class="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-2.5">
+  <div id="demoPanel" class="hidden absolute bottom-full right-0 mb-1 w-72 bg-white rounded-2xl shadow-premium border border-stone-200/80 p-3.5">
+    <div class="flex items-center justify-between pb-2.5 mb-1.5 border-b border-stone-100">
+      <span class="text-xs font-bold uppercase tracking-wider text-stone-700" data-i18n="demo_k"></span>
+      <button onclick="toggleDemoPanel()" class="p-1 text-stone-400 hover:text-stone-800"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+    </div>
+    <div class="space-y-1.5">
+      <button onclick="demoLoad('headphones')" class="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-stone-50 text-left"><span class="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-600"><i data-lucide="headphones" class="w-4 h-4"></i></span><span class="flex-grow"><b class="block text-xs">Sony WH-1000XM4</b><span class="text-[10px] text-stone-500" data-i18n="smp1"></span></span><span class="text-[9px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" data-i18n="r_repair"></span></button>
+      <button onclick="demoLoad('jacket')" class="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-stone-50 text-left"><span class="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-600"><i data-lucide="shirt" class="w-4 h-4"></i></span><span class="flex-grow"><b class="block text-xs" data-i18n="it2_n"></b><span class="text-[10px] text-stone-500" data-i18n="smp2"></span></span><span class="text-[9px] font-mono font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded" data-i18n="r_donate"></span></button>
+      <button onclick="demoLoad('blender')" class="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-stone-50 text-left"><span class="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-600"><i data-lucide="blender" class="w-4 h-4"></i></span><span class="flex-grow"><b class="block text-xs" data-i18n="it3_n"></b><span class="text-[10px] text-stone-500" data-i18n="smp3"></span></span><span class="text-[9px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" data-i18n="r_repair"></span></button>
+      <button onclick="demoLoad('chair')" class="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-stone-50 text-left"><span class="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-600"><i data-lucide="armchair" class="w-4 h-4"></i></span><span class="flex-grow"><b class="block text-xs" data-i18n="smp4"></b><span class="text-[10px] text-stone-500">₹50 of glue · beginner safe</span></span><span class="text-[9px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" data-i18n="r_repair"></span></button>
+    </div>
+    <div class="h-px bg-stone-200/80 my-2.5"></div>
+    <div class="grid grid-cols-3 gap-1.5">
+      <button onclick="demoVerify()" class="px-2 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[10px] font-bold flex items-center justify-center gap-1"><i data-lucide="badge-check" class="w-3 h-3"></i><span data-i18n="demo_v"></span></button>
+      <button onclick="fillGate();toggleDemoPanel()" class="px-2 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[10px] font-bold flex items-center justify-center gap-1"><i data-lucide="heart" class="w-3 h-3"></i><span data-i18n="demo_g"></span></button>
+      <button onclick="demoReset()" class="px-2 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[10px] font-bold flex items-center justify-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i><span data-i18n="demo_r"></span></button>
+    </div>
+  </div>
+  <button onclick="toggleDemoPanel()" class="flex items-center gap-2 px-4 py-2.5 rounded-full bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold shadow-lg transition-colors">
+    <i data-lucide="wand-2" class="w-3.5 h-3.5 text-brand-300"></i><span data-i18n="demo_t"></span>
+  </button>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div class="mlayer" id="mlayer">
+  <div class="mback" onclick="closeModal()"></div>
+
+  <div class="modal" id="m-verify" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-between mb-1"><b class="text-lg" data-i18n="mv_t"></b><button onclick="closeModal()" class="p-1 text-stone-400 hover:text-stone-800"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <p class="text-[13px] text-stone-500 mb-3" data-i18n="mv_s"></p>
+    <div class="vstep"><span class="vc"><span class="ck-in"></span></span><div><b id="mv1t" class="block text-sm"></b><span id="mv1s" class="text-xs text-stone-500 leading-relaxed"></span></div></div>
+    <div class="vstep"><span class="vc"><span class="ck-in"></span></span><div><b id="mv2t" class="block text-sm"></b><span id="mv2s" class="text-xs text-stone-500 leading-relaxed"></span></div></div>
+    <button id="vGo" onclick="completeVerify()" disabled class="mt-4 w-full px-5 py-3 rounded-full bg-brand-900 disabled:bg-stone-200 disabled:text-stone-400 text-white font-bold text-sm" data-i18n="mv_go"></button>
+  </div>
+
+  <div class="modal" id="m-listing" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-between mb-3"><b class="text-lg" data-i18n="ml_t"></b><button onclick="closeModal()" class="p-1 text-stone-400 hover:text-stone-800"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <div class="bg-stone-100 rounded-2xl p-4 flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-brand-100 text-brand-800 flex items-center justify-center"><i data-lucide="headphones" class="w-6 h-6"></i></div>
+      <div class="flex-grow"><b class="block text-sm">Sony WH-1000XM4</b><span class="text-xs text-stone-500" data-i18n="ml_s"></span></div>
+      <div class="text-right"><b class="block">₹6,800</b><span class="text-[11px] text-stone-500" data-i18n="ml_acc"></span></div>
+    </div>
+    <div class="flex flex-wrap gap-1.5 mt-3"><span class="text-[11px] border border-stone-300 rounded-full px-2.5 py-1 text-stone-600">Pads — worn</span><span class="text-[11px] border border-stone-300 rounded-full px-2.5 py-1 text-stone-600">Battery — degraded, stated</span><span class="text-[11px] border border-stone-300 rounded-full px-2.5 py-1 text-stone-600">Case + cable — included</span></div>
+    <p class="text-xs text-stone-500 mt-3 leading-relaxed" data-i18n="ml_cap"></p>
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <button onclick="copyListing()" class="px-5 py-3 rounded-full bg-brand-900 hover:bg-brand-800 text-white font-bold text-sm" data-i18n="ml_copy"></button>
+      <button onclick="toast(t('t_share'))" class="px-5 py-3 rounded-full bg-white border border-stone-300 hover:bg-stone-50 font-bold text-sm flex items-center justify-center gap-2"><i data-lucide="share-2" class="w-4 h-4"></i><span data-i18n="ml_share"></span></button>
+    </div>
+  </div>
+
+  <div class="modal" id="m-reuse" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-between mb-3"><b class="text-lg" id="ruTitle"></b><button onclick="closeModal()" class="p-1 text-stone-400 hover:text-stone-800"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <div id="ruBody" class="space-y-2 text-sm text-stone-600"></div>
+  </div>
+</div>
+
+<!-- ============ AI ASSISTANT PANEL ============ -->
+<aside id="aiPanel" class="fixed inset-y-0 right-0 z-[70] w-full sm:w-[420px] bg-white border-l border-stone-200/80 shadow-premium flex flex-col translate-x-full transition-transform duration-300 ease-out" aria-label="REKART assistant" aria-hidden="true">
+  <div class="flex items-center justify-between px-5 h-16 border-b border-stone-100 shrink-0">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-brand-900 text-brand-300 flex items-center justify-center"><i data-lucide="sparkles" class="w-4 h-4"></i></div>
+      <b class="text-sm" data-i18n="ai_t"></b>
+    </div>
+    <button onclick="closeAi()" class="p-1.5 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-100" aria-label="Close assistant"><i data-lucide="x" class="w-5 h-5"></i></button>
+  </div>
+  <div id="aiLog" class="flex-grow overflow-y-auto px-5 py-4 space-y-3" aria-live="polite"></div>
+  <form onsubmit="return aiFollowUp(event)" class="p-3 border-t border-stone-100 flex gap-2 shrink-0">
+    <input id="aiInput" autocomplete="off" class="flex-grow px-4 py-2.5 rounded-full bg-stone-100 focus:bg-white border border-transparent focus:border-brand-500 outline-none text-sm" />
+    <button class="w-10 h-10 rounded-full bg-brand-900 hover:bg-brand-800 text-white flex items-center justify-center shrink-0" aria-label="Send"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+  </form>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const f=n=>new Intl.NumberFormat('en-IN').format(n);
+const CIRC=2*Math.PI*32;
+
+/* ============================================================
+   SAMPLE DATA — edit everything here.
+   PROFILES: numbers.  PI: per-item strings (en/hi/hg).
+   ============================================================ */
+const PROFILES={
+ headphones:{id:'headphones',name:'Sony WH-1000XM4',cat:'electronics',fault:'Battery Replacement',route:'repair',age:'2–3 years',safety:'amber',
+   d:{cert:65,quote:850,bandLo:650,bandHi:1050,gmax:2400,working:14500,asis:6800,scrap:1400,be:7700,rule:8700,mid:1600,decay:200,qc:41,pr1v:'₹600–850',pr2v:'₹50–200'},
+   sell:[6800,5200,4900,4500,120],presets:[850,1900,9500]},
+ jacket:{id:'jacket',name:'Winter denim jacket',cat:'apparel',fault:'Zip & Lining Repair',route:'donate',age:'4–5 years',safety:'green',
+   d:{cert:72,quote:250,bandLo:150,bandHi:350,gmax:800,working:900,asis:400,scrap:12,be:500,rule:540,mid:500,decay:15,qc:28,pr1v:'₹150–350',pr2v:'₹50–150'},
+   sell:[400,null,300,null,12],presets:[250,600,1200]},
+ blender:{id:'blender',name:'Bajaj mixer grinder',cat:'appliance',fault:'Motor Capacitor / Bearing',route:'repair',age:'4–5 years',safety:'red',
+   d:{cert:58,quote:380,bandLo:250,bandHi:450,gmax:1200,working:1800,asis:700,scrap:300,be:1100,rule:1080,mid:800,decay:30,qc:33,pr1v:'₹250–450',pr2v:'₹50–100'},
+   sell:[700,null,600,400,60],presets:[380,700,1200]},
+ chair:{id:'chair',name:'Wooden desk chair',cat:'furniture',fault:'Joint Re-gluing',route:'repair',age:'6+ years',safety:'green',
+   d:{cert:81,quote:300,bandLo:200,bandHi:450,gmax:1000,working:2500,asis:900,scrap:60,be:1600,rule:1500,mid:700,decay:20,qc:19,pr1v:'₹200–450',pr2v:'₹0–150'},
+   sell:[900,null,700,null,60],presets:[300,900,1800]}
+};
+const PI={
+ headphones:{en:{note:'Sony WH-1000XM4 (battery drains in 20 min)',headline:'Battery degraded.',hMain:'Battery — most likely (65%)',hAlt:'Charging port — also possible (25%)',hMainC:'Battery — confirmed (90%)',hAltC:'Charging port — ruled out by the charge test',safetyT:'Needs specialized tools',safetyS:'Soldered cell, glued cups · heat and pry · about 45 minutes.',g1n:'Wiped and signed out',g1s:'Sony app, Bluetooth pairings cleared',g2n:'Case and cable included',g2s:'Shelters check completeness at intake',g3n:'Charged above 50%',g3s:'Tested at intake',i1t:'Keep it as a wired pair',i1m:'₹0 · 1 step · the cable is in the box',i1s:'Plug the included audio cable — the dead battery doesn\u2019t matter.',i2t:'Ear-pad donor for your next pair',i2m:'₹0 · 2 steps',i2s1:'Pads are the first thing to wear — swap them across.',i2s2:'A darzi can re-stitch torn pads for ₹100–150.',ask1:'Is the cell original or a copy — which one, exactly?',ask2:'Do I get the old cell back?',ask3:'Warranty in writing — how long, on what?',pr1:'Battery cell, OEM-equivalent',pr2:'Labour, Sitabuldi rates',v1t:'Charge to 100% and time it',v1s:'Healthy: about 2 hours. Degraded: far longer, or it stalls near 80%.',v2t:'Play at fixed volume, time the drain',v2s:'A healthy cell runs 25–30 hours. A worn one collapses in a few.',scanMatch:'Model matched — Sony WH-1000XM4',sc3:'Condition estimated — battery, 65%',shopA:'QuickFix Electronics',shopAs:'OEM cells · 6-month warranty',shopB:'Star Electronics',shopBs:'Chip-level boards · since 2004',ng1s:'Needs: audio for online classes · picks up Sundays',ng2s:'Needs: chargers, cables · drop-off anytime',cpv:'School AV'},
+ hi:{note:'Sony WH-1000XM4 (20 मिनट में बैटरी खत्म)',headline:'बैटरी कमज़ोर हो गई है।',hMain:'बैटरी — सबसे संभावित (65%)',hAlt:'चार्जिंग पोर्ट — यह भी संभव (25%)',hMainC:'बैटरी — तय (90%)',hAltC:'चार्जिंग पोर्ट — चार्ज टेस्ट से बाहर',safetyT:'ख़ास औज़ार चाहिए',safetyS:'सोल्डर किया सेल, चिपके कप · गरमी और प्राय · करीब 45 मिनट।',g1n:'डेटा मिटाया, साइन-आउट किया',g1s:'Sony ऐप, ब्लूटूथ पेयरिंग हटाईं',g2n:'केस और केबल साथ हैं',g2s:'संस्थाएँ पूरा सेट देखती हैं',g3n:'50% से ऊपर चार्ज',g3s:'रिसीव करते ही जाँचा जाता है',i1t:'वायर्ड जोड़ी बना लें',i1m:'₹0 · 1 कदम · केबल डिब्बे में है',i1s:'साथ वाली ऑडियो केबल लगाइए — बैटरी मरी हो तब भी चलेगा।',i2t:'अगली जोड़ी के लिए ईयर-पैड डोनर',i2m:'₹0 · 2 कदम',i2s1:'पैड सबसे पहले घिसते हैं — वही आगे लगा लें।',i2s2:'दर्ज़ी फटे पैड ₹100–150 में सिल देता है।',ask1:'सेल ओरिजिनल है या कॉपी — कौन सा?',ask2:'पुराना सेल मुझे वापस मिलेगा?',ask3:'वारंटी लिखित में — कितने महीने, किस पर?',pr1:'बैटरी सेल, OEM-दर्जे का',pr2:'मज़दूरी, सीताबुल्दी दर',v1t:'100% तक चार्ज करें, समय नापें',v1s:'ठीक सेल: करीब 2 घंटे। कमज़ोर: कहीं ज़्यादा, या 80% पर अटक जाए।',v2t:'एक ही आवाज़ पर चलाएँ, समय नापें',v2s:'ठीक सेल 25–30 घंटे चलता है। कमज़ोर कुछ ही घंटों में गिर जाता है।',scanMatch:'मॉडल मैच — Sony WH-1000XM4',sc3:'हालत अंदाज़ा — बैटरी, 65%',shopA:'QuickFix Electronics',shopAs:'OEM सेल · 6 महीने वारंटी',shopB:'Star Electronics',shopBs:'चिप-लेवल बोर्ड · 2004 से',ng1s:'ज़रूरत: ऑनलाइन क्लास के लिए ऑडियो · रविवार को पिकअप',ng2s:'ज़रूरत: चार्जर, केबल · कभी भी ला दें',cpv:'स्कूल AV'},
+ hg:{note:'Sony WH-1000XM4 (20 minute mein battery khatam)',headline:'Battery kharab ho gayi hai.',hMain:'Battery — sabse sambhavit (65%)',hAlt:'Charging port — yeh bhi sambhav (25%)',hMainC:'Battery — pakka (90%)',hAltC:'Charging port — charge test se bahar',safetyT:'Khaas auzaar chahiye',safetyS:'Solder kiya cell, chipke cup · garmi aur pry · kareeb 45 minute.',g1n:'Data mitaya, sign-out kiya',g1s:'Sony app, Bluetooth pairings hatayin',g2n:'Case aur cable saath hain',g2s:'Sansthaayein poora set dekhti hain',g3n:'50% se upar charge',g3s:'Receive karte hi jaanch hoti hai',i1t:'Wired jodi bana lein',i1m:'₹0 · 1 kadam · cable dibbe mein hai',i1s:'Saath wali audio cable lagaiye — battery mari ho tab bhi chalega.',i2t:'Agli jodi ke liye ear-pad donor',i2m:'₹0 · 2 kadam',i2s1:'Pad sabse pehle ghiste hain — wahi aage lagaa lein.',i2s2:'Darzi phate pad ₹100–150 mein sil deta hai.',ask1:'Cell original hai ya copy — kaun sa?',ask2:'Purana cell mujhe wapas milega?',ask3:'Warranty likhit mein — kitne mahine, kis par?',pr1:'Battery cell, OEM-darje ka',pr2:'Mazdoori, Sitabuldi dar',v1t:'100% tak charge karein, samay naapein',v1s:'Theek cell: kareeb 2 ghante. Kamzor: kahin zyada, ya 80% par atak jaaye.',v2t:'Ek hi awaaz par chalayein, samay naapein',v2s:'Theek cell 25–30 ghante chalta hai. Kamzor kuch hi ghanton mein gir jaata hai.',scanMatch:'Model match — Sony WH-1000XM4',sc3:'Haalat andaaza — battery, 65%',shopA:'QuickFix Electronics',shopAs:'OEM cells · 6 mahine warranty',shopB:'Star Electronics',shopBs:'Chip-level boards · 2004 se',ng1s:'Zaroorat: online class ke liye audio · Ravivar ko pickup',ng2s:'Zaroorat: charger, cable · kabhi bhi la dein',cpv:'School AV'}},
+ jacket:{en:{note:'Winter denim jacket (outgrown, collar fraying)',headline:'Collar fraying — body sound.',hMain:'Fabric wear — collar & cuffs (72%)',hAlt:'Seam stress — elbows (20%)',hMainC:'Fabric wear — confirmed (85%)',hAltC:'Seams — passed the tug test',safetyT:'Beginner safe',safetyS:'Needle and thread, or any Sitabuldi darzi · ₹150–350.',g1n:'Washed and dried',g1s:'Shelters accept only clean garments',g2n:'Zips and buttons all work',g2s:'Tested at intake',g3n:'Pockets emptied',g3s:'Check both inner pockets',i1t:'Cut into a heavy tote bag',i1m:'₹0 · 30 min · no-sew',i1s:'Fringe-knot the cut edge — holds 8 kg. Full guide in Reuse Studio.',i2t:'Patch donor for kid\u2019s jeans',i2m:'₹0 · 2 steps',i2s1:'Denim patches outlast new fabric.',i2s2:'A darzi cuts clean patches for ₹50.',ask1:'Can you match the original stitching?',ask2:'Collar only, or full cuff set — one price?',ask3:'Ready by when?',pr1:'Collar re-stitch, darzi',pr2:'Cuff repair',v1t:'Tug-test every seam',v1s:'Collar, cuffs, elbows, side seams — hands on each, firm pull.',v2t:'Zip and un-zip fully',v2s:'A snagged zip halves the donation value — and the resale.',scanMatch:'Model matched — denim jacket, 12 oz',sc3:'Condition estimated — collar wear, 72%',shopA:'Sitabuldi Darzi Corner',shopAs:'Alterations from ₹150',shopB:'Prince Tailors',shopBs:'Patch & repair · same day',ng1s:'Needs: boys\u2019 winter jackets, sizes 8–14 · picks up Sundays',ng2s:'Needs: shawls and blankets · drop-off anytime',cpv:'Winter wear'},
+ hi:{note:'सर्दी की डेनिम जैकेट (छोटी पड़ गई, कॉलर घिसा)',headline:'कॉलर घिसा है — कपड़ा मज़बूत है।',hMain:'कपड़े की घिसावट — कॉलर और कफ़ (72%)',hAlt:'सिलाई पर ज़ोर — कोहनी (20%)',hMainC:'घिसावट — तय (85%)',hAltC:'सिलाइयाँ — खिंचाव-टेस्ट पास',safetyT:'बिल्कुल आसान',safetyS:'सुई-धागा, या सीताबुल्दी का कोई दर्ज़ी · ₹150–350।',g1n:'धुली और सूखी',g1s:'संस्थाएँ सिर्फ़ साफ़ कपड़े लेती हैं',g2n:'ज़िप और बटन सब चलते हैं',g2s:'लेते समय जाँचा जाता है',g3n:'जेबें खाली',g3s:'अंदर की दोनों जेबें देख लें',i1t:'मज़बूत थैली बना लें',i1m:'₹0 · 30 मिनट · बिना सिलाई',i1s:'कटे किनारे पर गाँठें — 8 किलो तक संभालता है। पूरी गाइड रीयूज़ स्टूडियो में।',i2t:'बच्चों की जीन्स के लिए पैच',i2m:'₹0 · 2 कदम',i2s1:'डेनिम पैच नए कपड़े से लंबे चलते हैं।',i2s2:'दर्ज़ी ₹50 में साफ़ पैच काट देता है।',ask1:'मूल की सिलाई जैसी मिलेगी?',ask2:'सिर्फ़ कॉलर, या कफ़ भी — एक ही भाव?',ask3:'कब तक तैयार?',pr1:'कॉलर री-स्टिच, दर्ज़ी',pr2:'कफ़ मरम्मत',v1t:'हर सिलाई का खिंचाव-टेस्ट',v1s:'कॉलर, कफ़, कोहनी, बग़ल — हाथ रखकर पक्का खींचें।',v2t:'ज़िप पूरी खोलें, बंद करें',v2s:'फँसी ज़िप दान की क़ीमत — और बिक्री की भी — आधी कर देती है।',scanMatch:'मॉडल मैच — डेनिम जैकेट, 12 oz',sc3:'हालत अंदाज़ा — कॉलर घिसाव, 72%',shopA:'सीताबुल्दी दर्ज़ी कॉर्नर',shopAs:'सिलाई ₹150 से',shopB:'प्रिंस टेलर्स',shopBs:'पैच और मरम्मत · उसी दिन',ng1s:'ज़रूरत: बच्चों की सर्दी की जैकेट, साइज़ 8–14 · रविवार पिकअप',ng2s:'ज़रूरत: शॉल और कंबल · कभी भी लाएँ',cpv:'सर्दी के कपड़े'},
+ hg:{note:'Sardi ki denim jacket (chhoti pad gayi, collar ghisa)',headline:'Collar ghisa hai — kapda mazboot hai.',hMain:'Kapde ka ghisav — collar aur cuff (72%)',hAlt:'Silai par zor — kohni (20%)',hMainC:'Ghisav — pakka (85%)',hAltC:'Silaiyan — tug test pass',safetyT:'Bilkul aasaan',safetyS:'Sui-dhaaga, ya Sitabuldi ka koi darzi · ₹150–350.',g1n:'Dhuli aur sookhi',g1s:'Sansthaayein sirf saaf kapde leti hain',g2n:'Zip aur button sab chalte hain',g2s:'Lete waqt jaancha jaata hai',g3n:'Jebein khaali',g3s:'Andar ki dono jebein dekh lein',i1t:'Mazboot theli bana lein',i1m:'₹0 · 30 minute · bina silai',i1s:'Kate kinare par ghaantein — 8 kilo tak sambhalta hai. Poori guide Reuse Studio mein.',i2t:'Bachchon ki jeans ke liye patch',i2m:'₹0 · 2 kadam',i2s1:'Denim patch naye kapde se lambe chalte hain.',i2s2:'Darzi ₹50 mein saaf patch kaat deta hai.',ask1:'Mool ki silai jaisi milegi?',ask2:'Sirf collar, ya cuff bhi — ek hi bhaav?',ask3:'Kab tak taiyar?',pr1:'Collar re-stitch, darzi',pr2:'Cuff repair',v1t:'Har silai ka tug test',v1s:'Collar, cuff, kohni, bagal — haath rakhkar pakka kheanchein.',v2t:'Zip poori kholein, band karein',v2s:'Phansi zip daan ki keemat — aur bikri ki bhi — aadhi kar deti hai.',scanMatch:'Model match — denim jacket, 12 oz',sc3:'Haalat andaaza — collar ghisav, 72%',shopA:'Sitabuldi Darzi Corner',shopAs:'Silai ₹150 se',shopB:'Prince Tailors',shopBs:'Patch & repair · usi din',ng1s:'Zaroorat: bachchon ki sardi ki jacket, size 8–14 · Ravivar pickup',ng2s:'Zaroorat: shawl aur kambal · kabhi bhi laayein',cpv:'Winter wear'}},
+ blender:{en:{note:'Bajaj mixer grinder (motor hums, blades jam)',headline:'Motor bearing worn.',hMain:'Motor bearing — most likely (58%)',hAlt:'Coupler worn — also possible (30%)',hMainC:'Motor bearing — confirmed (84%)',hAltC:'Coupler — ruled out by the empty-run test',safetyT:'Do not attempt at home',safetyS:'Mains motor and a live capacitor — shops handle this in minutes.',g1n:'Jar and blades washed',g1s:'Dried fully — tested on the spot',g2n:'All attachments together',g2s:'Jar, lids, chutney bowl',g3n:'Cable and plug undamaged',g3s:'Intake checks the cord first',i1t:'Jars → airtight pantry storage',i1m:'₹0 · 15 min',i1s:'Label the lids — the sealing rings keep masala fresh for months.',i2t:'Keep the coupler — it fits 6 Bajaj models',i2m:'₹0 · 1 step',i2s1:'The most-lost part in every Indian kitchen. Your next mixer will thank you.',i2s2:'',ask1:'Original Bajaj motor or rewound?',ask2:'Warranty on the rewinding — how many months?',ask3:'Can I watch the test run?',pr1:'Bearing or rewinding',pr2:'Labour, Itwari rates',v1t:'Run empty for 30 seconds',v1s:'A dry rattle says bearing; a squeal says coupler.',v2t:'Smell test after 10 seconds',v2s:'Burnt varnish — a sweet, sharp smell — means windings.',scanMatch:'Model matched — Bajaj GX1',sc3:'Condition estimated — motor, 58%',shopA:'Itwari Appliance Repair',shopAs:'Rewinding · 3-month warranty',shopB:'QuickFix Electronics',shopBs:'Generic parts · same day',ng1s:'Needs: kitchen equipment for mid-day meals',ng2s:'Needs: small appliances in working order',cpv:'NGO kitchen'},
+ hi:{note:'बजाज मिक्सर (मोटर भिनभिनाती है, ब्लेड जाम)',headline:'मोटर की बेयरिंग घिस गई है।',hMain:'मोटर बेयरिंग — सबसे संभावित (58%)',hAlt:'कपलर घिसा — यह भी संभव (30%)',hMainC:'मोटर बेयरिंग — तय (84%)',hAltC:'कपलर — खाली-चाल टेस्ट से बाहर',safetyT:'घर पर न खोलें',safetyS:'मेंस मोटर और चार्ज वाला कैपेसिटर — दुकान मिनटों में निपटा देती है।',g1n:'जार और ब्लेड धोए',g1s:'पूरा सूखा — वहीं जाँच होती है',g2n:'सारे अटैचमेंट साथ',g2s:'जार, ढक्कन, चटनी कटोरी',g3n:'केबल और प्लग सही',g3s:'पहले कॉर्ड देखा जाता है',i1t:'जार → एयरटाइट कंटेनर',i1m:'₹0 · 15 मिनट',i1s:'ढक्कन पर लेबल — सीलिंग रिंग मसाला महीनों ताज़ा रखती है।',i2t:'कपलर रख लें — 6 बजाज मॉडलों में चलता है',i2m:'₹0 · 1 कदम',i2s1:'हर भारतीय रसोई का सबसे खोया पुर्ज़ा। अगला मिक्सर शुक्रिया कहेगा।',i2s2:'',ask1:'ओरिजिनल बजाज मोटर या रिवाइंड?',ask2:'रिवाइंडिंग पर वारंटी — कितने महीने?',ask3:'टेस्ट-रन दिखा सकते हैं?',pr1:'बेयरिंग या रिवाइंडिंग',pr2:'मज़दूरी, इटवारी दर',v1t:'30 सेकंड खाली चलाएँ',v1s:'सूखी खनखनाहट = बेयरिंग; चीख जैसी आवाज़ = कपलर।',v2t:'10 सेकंड बाद सूँघें',v2s:'जला वार्निश — मीठी, तेज़ गंध — वाइंडिंग का संकेत।',scanMatch:'मॉडल मैच — Bajaj GX1',sc3:'हालत अंदाज़ा — मोटर, 58%',shopA:'इटवारी एप्लायंस रिपेयर',shopAs:'रिवाइंडिंग · 3 महीने वारंटी',shopB:'QuickFix Electronics',shopBs:'जेनेरिक पुर्ज़े · उसी दिन',ng1s:'ज़रूरत: मिड-डे मील के लिए रसोई उपकरण',ng2s:'ज़रूरत: चालू हालत में छोटे उपकरण',cpv:'NGO रसोई'},
+ hg:{note:'Bajaj mixer (motor bhinbhinati hai, blade jam)',headline:'Motor ki bearing ghis gayi hai.',hMain:'Motor bearing — sabse sambhavit (58%)',hAlt:'Coupler ghisa — yeh bhi sambhav (30%)',hMainC:'Motor bearing — pakka (84%)',hAltC:'Coupler — khaali-chal test se bahar',safetyT:'Ghar par na kholein',safetyS:'Mains motor aur charge wala capacitor — dukaan minute mein nipata deti hai.',g1n:'Jaar aur blade dhoye',g1s:'Poora sookha — wahin jaanch hoti hai',g2n:'Saare attachment saath',g2s:'Jaar, dhakkan, chutney katori',g3n:'Cable aur plug sahi',g3s:'Pehle cord dekha jaata hai',i1t:'Jaar → airtight container',i1m:'₹0 · 15 minute',i1s:'Dhakkan par label — sealing ring masala mahinon taaza rakhti hai.',i2t:'Coupler rakh lein — 6 Bajaj modelon mein chalta hai',i2m:'₹0 · 1 kadam',i2s1:'Har bharatiya rasoi ka sabse khoya purza. Agla mixer shukriya kahega.',i2s2:'',ask1:'Original Bajaj motor ya rewind?',ask2:'Rewinding par warranty — kitne mahine?',ask3:'Test-run dikha sakte hain?',pr1:'Bearing ya rewinding',pr2:'Mazdoori, Itwari dar',v1t:'30 second khaali chalayein',v1s:'Sookhi khanakhanaahat = bearing; cheekh jaisi aawaaz = coupler.',v2t:'10 second baad soonghein',v2s:'Jala warnish — meethi, tez gandh — winding ka ishaara.',scanMatch:'Model match — Bajaj GX1',sc3:'Haalat andaaza — motor, 58%',shopA:'Itwari Appliance Repair',shopAs:'Rewinding · 3 mahine warranty',shopB:'QuickFix Electronics',shopBs:'Generic purje · usi din',ng1s:'Zaroorat: mid-day meal ke liye rasoi upkaran',ng2s:'Zaroorat: chalu haalat mein chhote upkaran',cpv:'NGO kitchen'}},
+ chair:{en:{note:'Wooden desk chair (wobbly leg)',headline:'Loose joinery — wood is sound.',hMain:'Dried glue in joints (81%)',hAlt:'Cracked rail (14%)',hMainC:'Joints — confirmed reglueable (88%)',hAltC:'Cracks — none found in the rails',safetyT:'Beginner safe',safetyS:'Wood glue, two clamps, one afternoon. ₹50 of glue.',g1n:'All screws and bolts present',g1s:'Check under the seat',g2n:'No cracked arms or rails',g2s:'Hairlines are fine — splits are not',g3n:'Seat fabric sound',g3s:'No tears, springs intact',i1t:'Reglue it yourself this weekend',i1m:'₹50 · one afternoon',i1s:'Dry-fit, glue, clamp overnight. Fevicol SH or standard wood glue.',i2t:'Backrest spindles → kitchen rack',i2m:'₹0 · 2 steps',i2s1:'If the back is beyond saving, the spindles make a clean knife & cable rack.',i2s2:'Sand once, oil twice.',ask1:'Reglued joints, or just screws?',ask2:'Which glue — standard wood glue?',ask3:'Weight test before I take it home?',pr1:'Reglue all joints',pr2:'Polish touch-up',v1t:'Wiggle each leg',v1s:'Where it moves tells you which joint — mark it with chalk.',v2t:'Look for hairline cracks in rails',v2s:'Run a fingernail along every rail — it catches what eyes miss.',scanMatch:'Model matched — solid teak frame',sc3:'Condition estimated — joints, 81%',shopA:'Kalamna Carpentry',shopAs:'Reglue & polish · pickup available',shopB:'Jaripatka Wood Works',shopBs:'Furniture repair · since 1998',ng1s:'Needs: sturdy seating for the library',ng2s:'Needs: study desks and chairs · pickup Sunday',cpv:'Library seating'},
+ hi:{note:'लकड़ी की कुर्सी (ढीली टाँग)',headline:'जोड़ ढीले हैं — लकड़ी मज़बूत है।',hMain:'जोड़ों में गोंद सूख गया (81%)',hAlt:'कोई रेल टूटी (14%)',hMainC:'जोड़ — दोबारा गोंद लग सकता है, तय (88%)',hAltC:'दरारें — रेलों में कोई नहीं मिली',safetyT:'बिल्कुल आसान',safetyS:'वुड गोंद, दो क्लैंप, एक दोपहर। ₹50 का गोंद।',g1n:'सारे स्क्रू और बोल्ट मौजूद',g1s:'सीट के नीचे देखें',g2n:'बाज़ू या रेल में दरार नहीं',g2s:'बाल जितनी दरार ठीक, फटी हुई नहीं',g3n:'सीट का कपड़ा सही',g3s:'न फटा, स्प्रिंग सही',i1t:'इसी वीकेंड ख़ुद गोंद लगाएँ',i1m:'₹50 · एक दोपहर',i1s:'सूखा फिट करें, गोंद लगाएँ, रातभर क्लैंप। Fevicol SH या साधारण वुड गोंद।',i2t:'पीठ की छड़ें → किचन रैक',i2m:'₹0 · 2 कदम',i2s1:'अगर पीठ न बचे, तो छड़ों से साफ़ चाकू-केबल रैक बनता है।',i2s2:'एक बार रेगड़, दो बार तेल।',ask1:'गोंद वाले जोड़, या सिर्फ़ स्क्रू?',ask2:'कौन सा गोंद — स्टैंडर्ड वुड गोंद?',ask3:'ले जाने से पहले वज़न-टेस्ट?',pr1:'सारे जोड़ों में गोंद',pr2:'पॉलिश टच-अप',v1t:'हर टाँग हिलाएँ',v1s:'जहाँ हिलती है, वही जोड़ — चॉक से निशान लगाएँ।',v2t:'रेलों पर बाल-जैसी दरारें देखें',v2s:'हर रेल पर नाख़ून फिराएँ — आँख से जो छूटे, वह पकड़ लेता है।',scanMatch:'मॉडल मैच — ठोस सागवान फ़्रेम',sc3:'हालत अंदाज़ा — जोड़, 81%',shopA:'कलमना कारपेंट्री',shopAs:'गोंद और पॉलिश · पिकअप मौजूद',shopB:'जरीपटका वुड वर्क्स',shopBs:'फ़र्नीचर मरम्मत · 1998 से',ng1s:'ज़रूरत: लाइब्रेरी के लिए मज़बूत कुर्सियाँ',ng2s:'ज़रूरत: पढ़ने की मेज़ और कुर्सी · रविवार पिकअप',cpv:'लाइब्रेरी बैठक'},
+ hg:{note:'Lakdi ki kursi (dheeli taang)',headline:'Jod dheele hain — lakdi mazboot hai.',hMain:'Jodon mein gond sookh gaya (81%)',hAlt:'Koi rail tooti (14%)',hMainC:'Jod — dobara gond lag sakta hai, pakka (88%)',hAltC:'Daraarein — railon mein koi nahin mili',safetyT:'Bilkul aasaan',safetyS:'Wood gond, do clamp, ek dopahar. ₹50 ka gond.',g1n:'Saare screw aur bolt maujood',g1s:'Seat ke neeche dekhein',g2n:'Baazu ya rail mein daraar nahin',g2s:'Baal jitni daar theek, phati hui nahin',g3n:'Seat ka kapda sahi',g3s:'Na phata, spring sahi',i1t:'Isi weekend khud gond lagayein',i1m:'₹50 · ek dopahar',i1s:'Sookha fit karein, gond lagayein, raatbhar clamp. Fevicol SH ya sadharan wood gond.',i2t:'Peeth ki chhadiyan → kitchen rack',i2m:'₹0 · 2 kadam',i2s1:'Agar peeth na bachhe, toh chhadiyon se saaf chaaku-cable rack banta hai.',i2s2:'Ek baar regad, do baar tel.',ask1:'Gond wale jod, ya sirf screw?',ask2:'Kaun sa gond — standard wood gond?',ask3:'Le jaane se pehle wajan-test?',pr1:'Saare jodon mein gond',pr2:'Polish touch-up',v1t:'Har taang hilayein',v1s:'Jahan hilti hai, wahi jod — chalk se nishaan lagayein.',v2t:'Railon par baal-jaisi daraarein dekhein',v2s:'Har rail par naakhun firayein — aankh se jo chhute, woh pakad leta hai.',scanMatch:'Model match — thos saagwan frame',sc3:'Haalat andaaza — jod, 81%',shopA:'Kalamna Carpentry',shopAs:'Gond aur polish · pickup maujood',shopB:'Jaripatka Wood Works',shopBs:'Furniture repair · 1998 se',ng1s:'Zaroorat: library ke liye mazboot kursiyan',ng2s:'Zaroorat: padhne ki mez aur kursi · Ravivar pickup',cpv:'Library seating'}}
+};
+
+/* ---------- state ---------- */
+let D,P;
+const S={item:'headphones',quote:850,verdict:'fair',verified:false,alertOff:false,route:'repair',hasItem:false,scanning:false,ringDrawn:false};
+
+/* ---------- shared i18n ---------- */
+const I18N={
+en:{
+ hdr_sub:'Product Intelligence',hdr_cta:'Analyze an Item',
+ nav_home:'Home',nav_don:'Donations',nav_rep:'Repairs',nav_reu:'Reuse',srch_ph:'Search items, guides, disposal — or ask anything',ask_ai:'Ask AI',ai_t:'REKART Assistant',ai_ph:'Ask a follow-up…',ai_think:'Thinking…',nav_analyze:'Analyze',nav_compare:'Compare Paths',nav_reuse:'Reuse Studio',nav_items:'My Items',nav_impact:'Impact',nav_dash:'Dashboard',
+ nt_t:'Activity & Updates',nt_x:'Close',nt1_t:'What did you actually pay?',nt1_s:'Your Sony repair receipt calibrates the Sitabuldi battery band.',
+ nt2_t:'Pickup tomorrow',nt2_s:'Snehalaya collects 4 winter garments, 11 am–1 pm.',
+ fill:'Fill sample',demo_t:'Demo data',demo_k:'Load a sample item',demo_v:'Verify 90%',demo_g:'Fill gate',demo_r:'Reset',
+ t_loaded:'sample loaded — verdict ready',
+ hero_badge:'Intelligent Second-Life Engine · Nagpur pilot',hero_t1:'Give every item a',hero_t2:'better next step.',
+ hero_s:'REKART tells you whether to repair, sell, donate, reuse or recycle — with real Nagpur rates behind every number.',
+ hero_cta1:'Analyze an Item',hero_cta2:'How REKART Works',
+ stat1:'items redirected',stat2:'live Nagpur rate bands',stat3:'to a verdict',
+ hc_k:'Transformation Sequence',hc_unused:'Unused object',hc_fate:'Uncertain fate',hc_sub:'Idle in a drawer for 14 months',
+ hc_engine:'REKART multi-factor evaluation',hc_rec:'Recommended path',hc_title:'Battery repair & recalibration',
+ hc_body:'Hardware is 88% prime. An ₹850 cell retains ₹14,500 of resale life.',hc_alt:'Alternates:',hc_foot:'Zero guilt. Zero decision fatigue.',hc_try:'Try with your item →',
+ hiw_k:'The 4-step resolution',hiw_t:'How REKART turns hesitation into action',
+ hiw_s:'Most clutter survives because deciding takes research. REKART finishes it in seconds.',
+ st1_t:'Upload Item',st1_s:'Snap a photo or drag one in — no forms.',st2_t:'Analyze Condition',st2_s:'Wear, material integrity, resale liquidity — estimated on-device.',
+ st3_t:'Get the Verdict',st3_s:'One dominant recommendation, transparent alternates.',st4_t:'Take Action',st4_s:'Book repairs, draft listings, order pickups, or find drop-offs.',
+ paths_k:'Complete decision coverage',paths_t:'Five pathways. Every household product.',paths_cta:'Compare trade-offs',
+ p1_t:'Repair',p1_s:'Fix worn parts, swap cells, re-sole shoes. Keep 80–95% of embodied value.',p1_tag:'Highest life retention',
+ p2_t:'Sell',p2_s:'Instant pricing benchmarks and pre-filled listings.',p2_tag:'Direct cash return',
+ p3_t:'Donate',p3_s:'Matched directly with vetted local shelters and schools.',p3_tag:'Immediate social good',
+ p4_t:'Reuse & Upcycle',p4_s:'Repurpose what you own into everyday function.',p4_tag:'Creative transformation',
+ p5_t:'Recycle / Dispose',p5_s:'CPCB-authorized centers for what is truly done. Kabadiwala for safe weight.',p5_tag:'Zero landfill',
+ cta_k:'Decide with confidence',cta_t:'Not sure what to do with it? Let REKART help.',
+ cta_s:'In 30 seconds: cost, resale, repairability, and real drop-offs near you.',
+ cta_b1:'Start Free Analysis',cta_b2:'Try Sample Headphones',
+ an_k:'Object Intelligence',an_t:'What should you do with it?',an_s:'Upload a photo or pick a demo object — photos never leave this device.',
+ drop_t1:'Drag & drop your item photo here, or',drop_t2:'browse',drop_s:'PNG, JPG, WEBP up to 20MB. Natural light gives the best read.',
+ choose:'Choose from Device',take:'Take a Photo',pile:'Pile Mode — 5+ garments',
+ note_l:'Item note (optional)',year_l:'When did you get it?',unsure:'Not sure',
+ samples_k:'Or test with verified samples:',smp1:'battery drains in 20 min',smp2:'Winter jacket (outgrown)',smp3:'Kitchen blender (unused)',smp4:'Desk chair (wobbly leg)',
+ ready:'Ready for scan',replace:'Replace photo',privacy:'Photos are evaluated privately in-session.',an_btn:'Analyze Item',
+ sc_k:'Digital Telemetry',sc_t:'Analyzing your item…',sc_go:'View the verdict',sc1:'Photos received — staying on this device',
+ rs_meta:'3 photos + triage · diagnosed just now',cert_k:'Confidence in this diagnosis',
+ verify_cta:'Spend 10 minutes to be 90% sure',verify_done:'Verified · 90% certain',
+ routes_k:'Routes',r_repair:'Repair',r_sell:'Sell',r_donate:'Donate',r_reuse:'Reuse',r_recycle:'Recycle',
+ fps_t:'Fair Price Shield',quote_k:'Shop\u2019s quote',upload:'or upload the estimate',
+ fair:'Fair',high:'High',vhigh:'Very High',delta_fair:'within the local band',
+ pr3:'Verified quotes behind the band',pr4:'Last calibrated',
+ ror_t:'Repair or release',cap60:'THE 60% RULE',
+ l_work:'Working resale',l_q:'Repair quote',l_asis:'Sell as-is',l_scrap:'Parts & scrap',
+ alert_t:'Repair doesn\u2019t pay here',see_sell:'See sell options',keep_repair:'Keep repair',
+ shops_t:'Shops near you',rank_t:'Where it sells best',rank_s:'RANKED BY PAYOUT PER EFFORT',
+ ch1_n:'P2P resale',ch1_s:'You meet buyers · OLX / Marketplace',ch2_n:'Instant buy-back',ch2_s:'Price locks at pickup',
+ ch3_n:'Offline store',ch3_s:'Sitabuldi walk-in',ch4_n:'Brand exchange',ch4_s:'Only with a new purchase',
+ ch5_n:'Kabadiwala — by weight',ch5_s:'When nothing else applies',
+ tv1:'2–5 days',tv2:'today',tv3:'same day',tv4:'with purchase',
+ scam_t:'Two scams to know before you list',scam1_t:'The army-transfer buyer',scam1_v:'Real buyers call. Urgency plus a QR is a pattern — walk away.',
+ scam2_t:'The \u201creceive money\u201d QR',scam2_v:'Scanning a QR sends money — it never receives. No genuine buyer needs you to scan anything.',
+ gen_cta:'Generate P2P listing',gate_t:'Donation readiness',donate_cta:'Find it a home',ngo_t:'Who needs it, near you',
+ keep_cta:'Not ready to give it away? Keep it in the Vault',
+ pb_t:'Second-life playbook',pb_s:'RANKED BY WHAT YOU CAN DO TONIGHT',
+ trades_t:'For everything else',tr1:'Darzi — alterations from ₹150 · Sitabuldi',tr2:'Kalhai — utensil re-tinning · Jaripatka',tr3:'Mochi — bags and shoes · Dharampeth',
+ vault_t:'Memory Vault',vault_h:'Keep what matters.',vault_i:'Papa\u2019s HMT watch — stopped in 2009, kept anyway.',
+ vault_cap:'Photos, voice notes, revisit dates. No prices. Ever.',vchip:'Revisit before Diwali',
+ rc_t:'Authorized drop-offs',split_t:'Work with your kabadiwala',split_s:'BY WEIGHT, WHERE IT\u2019S SAFE',
+ safe_k:'Safe by weight',auth_k:'Authorized only',sp1:'Newspapers',sp2:'Steel utensils',sp3:'Iron stand',sp4:'This battery — lithium',sp5:'CFL bulbs — mercury',
+ bag_t:'Handing over the whole bag?',hz_t:'Pull these out first',
+ hz_b:'Lithium cells get punctured at scrap yards and catch fire; CFLs carry mercury. Weigh the rest — the battery goes to Croma\u2019s bin.',
+ hz_link:'Nearest battery bin — Croma, 2.4 km',
+ cp_k:'Decision Coverage',cp_t:'Compare paths',cp_s:'Same item, five futures — the numbers side by side.',
+ cp_cost:'cost',cp_net:'net',cp2_s:'Cash today, stated honestly — fewer haggles.',cp3_s:'Matched to a verified, named local need.',cp4_s:'Zero cost, zero logistics — keep it working.',cp5_s:'CPCB-authorized recovery of parts and materials.',
+ cp_rule_t:'The 60% rule',cp_kab_t:'And the kabadiwala?',
+ items_t:'My Items',seg_all:'All',seg_vault:'Vault',seg_proofs:'Proofs',
+ items_sum:'6 items · about ₹18,900 recoverable',it_ready:'Verdict ready',
+ it1_s:'Battery degraded · 65%',it2_n:'Winter jacket ×2',it2_s:'Outgrown · verdict ready',it3_n:'Kitchen blender',it3_s:'Motor hums · verdict ready',
+ it4_n:'Steel trunk',it4_s:'Kabadiwala · by weight',it5_n:'Papa\u2019s HMT watch',it5_s:'Kept, not priced',
+ pf_view:'View',pf1_t:'Recycling certificate · Green Vision — battery + 6 CFLs · #GV-2214',pf2_t:'Donation distributed · Snehalaya — 2 kurtas · 3 photos',pf3_t:'Repair receipt · QuickFix — ₹850 paid · feeds local rate bands',
+ im_t:'Your impact',im_s:'Grounded in receipts, not estimates — every number traces to a proof.',
+ im1:'e-waste diverted from landfill',im2:'items re-homed',im3:'value recovered',
+ im_pfk:'Proof, not promises',im_pf1:'Recycling certificate on file — Green Vision, CPCB-authorized.',im_pf2:'Donation photos confirmed by Snehalaya intake.',im_pf3:'Repair receipts feed the Nagpur rate bands — anonymously.',
+ db_k:'Crowdsourced Intelligence',db_t:'Rate calibration',db_s:'Every real repair receipt sharpens the Fair Price Shield for everyone in Nagpur.',
+ db_askk:'One tap, anonymous',db_ask_s:'Adjusts the local band. Outliers are filtered automatically.',
+ db_more:'Shop found more issues',db_recent:'Recent verified quotes',db_fresh:'LIVE · OUTLIERS FILTERED',
+ db_r1:'Battery cell, XM4 · quoted at 2 shops',db_r2:'Ear-pad stitching · Sitabuldi darzi',db_r3:'Charging port, XM4 · \u201cshop found more issues\u201d',
+ mv_t:'Get to 90% sure',mv_s:'Two checks, about ten minutes. Each one rules the other cause in or out.',mv_go:'Update verdict',
+ ml_t:'P2P listing — preview',ml_s:'Battery degraded — stated up front',ml_acc:'accept ₹6,200',
+ ml_cap:'Auto-filled from your triage answers. An honest listing is the scam shield — fewer haggles, faster sale.',
+ ml_copy:'Copy listing text',ml_share:'Share',
+ t_pile:'Pile mode needs the camera — it lives in the phone build',t_updated:'Verdict updated — 90% certain',
+ t_demo:'Demo case — the full build wires this up',t_doc:'Document viewer opens here — in the full build',
+ t_share:'Opens the share dialog here',t_copied:'Listing copied',t_cal:'Thanks — the local band just sharpened.',
+ t_one:'One check to go',t_home:'Anand Vidyalaya — picks up Sundays · 3.2 km',
+ foot_r:'Nagpur pilot · rates calibrated 2 weeks ago · photos stay on your device'
+},
+hi:{
+ hdr_sub:'प्रोडक्ट इंटेलिजेंस',hdr_cta:'चीज़ जाँचें',
+ nav_home:'होम',nav_don:'दान',nav_rep:'मरम्मत',nav_reu:'दोबारा इस्तेमाल',srch_ph:'चीज़ें, गाइड, निपटान खोजें — या कुछ भी पूछें',ask_ai:'AI से पूछें',ai_t:'रेकार्ट सहायक',ai_ph:'आगे पूछें…',ai_think:'सोच रहा है…',nav_analyze:'जाँच',nav_compare:'रास्ते तुलना',nav_reuse:'रीयूज़ स्टूडियो',nav_items:'मेरी चीज़ें',nav_impact:'प्रभाव',nav_dash:'डैशबोर्ड',
+ nt_t:'गतिविधि और अपडेट',nt_x:'बंद करें',nt1_t:'असल में कितना लगा?',nt1_s:'आपकी Sony रसीद सीताबुल्दी की बैटरी दर को और पक्की करेगी।',
+ nt2_t:'कल पिकअप',nt2_s:'Snehalaya कल 4 ऊनी कपड़े लेने आएगा, सुबह 11–दोपहर 1।',
+ fill:'सैंपल भरें',demo_t:'डेमो डेटा',demo_k:'सैंपल चीज़ लोड करें',demo_v:'90% जाँच',demo_g:'चेक भरें',demo_r:'रीसेट',
+ t_loaded:'सैंपल लोड — फ़ैसला तैयार',
+ hero_badge:'इंटेलिजेंट सेकंड-लाइफ इंजन · नागपुर पायलट',hero_t1:'हर चीज़ को दीजिए',hero_t2:'एक बेहतर अगला क़दम।',
+ hero_s:'REKART बताता है — मरम्मत, बिक्री, दान, दोबारा इस्तेमाल या रीसायकल — हर आँकड़े के पीछे नागपुर के असली भाव।',
+ hero_cta1:'चीज़ जाँचें',hero_cta2:'रेकार्ट कैसे काम करता है',
+ stat1:'चीज़ें निर्देशित',stat2:'नागपुर की लाइव दरें',stat3:'फ़ैसले तक',
+ hc_k:'ट्रांसफ़ॉर्मेशन सीक्वेंस',hc_unused:'बेकार पड़ी चीज़',hc_fate:'अनिश्चित हालत',hc_sub:'14 महीने से दराज़ में पड़ी है',
+ hc_engine:'रेकार्ट मल्टी-फ़ैक्टर मूल्यांकन',hc_rec:'सुझाया रास्ता',hc_title:'बैटरी मरम्मत और री-कैलिब्रेशन',
+ hc_body:'हार्डवेयर 88% ठीक है। ₹850 का सेल ₹14,500 की बिक्री ज़िंदा रखता है।',hc_alt:'विकल्प:',hc_foot:'न दोष, न झिझक।',hc_try:'अपनी चीज़ से आज़माएँ →',
+ hiw_k:'चार-क़दम का हल',hiw_t:'झिझक को रेकार्ट कैसे बदलता है काम में',
+ hiw_s:'अधिकतर चीज़ें इसलिए जमती हैं क्योंकि फ़ैसले में रिसर्च लगती है। REKART यह सेकंडों में निपटा देता है।',
+ st1_t:'फ़ोटो लगाइए',st1_s:'फ़ोटो खींचिए या खींच लाइए — कोई फ़ॉर्म नहीं।',st2_t:'हालत की जाँच',st2_s:'घिसाव, मटीरियल, बिक्री दर — सब डिवाइस पर ही।',
+ st3_t:'फ़ैसला पाइए',st3_s:'एक मुख्य सुझाव, पारदर्शी विकल्प साथ में।',st4_t:'काम कीजिए',st4_s:'मरम्मत बुक करें, लिस्टिंग बनाएँ, पिकअप बुलाएँ, या ड्रॉप-पॉइंट देखें।',
+ paths_k:'पूरा फ़ैसला कवर',paths_t:'पाँच रास्ते। हर घरेलू चीज़।',paths_cta:'तुलना देखें',
+ p1_t:'मरम्मत',p1_s:'घिसे पुर्ज़े, सेल, जूते के सोल — 80–95% मूल्य बचा रहे।',p1_tag:'सबसे लंबी ज़िंदगी',
+ p2_t:'बेचें',p2_s:'तुरंत भाव और पहले से भरी लिस्टिंग।',p2_tag:'सीधा पैसा',
+ p3_t:'दान',p3_s:'जाँचे-परखे स्थानीय आश्रयों और स्कूलों से सीधा मिलान।',p3_tag:'तुरंत समाज-कल्याण',
+ p4_t:'रीयूज़ और अपसाइकल',p4_s:'अपनी ही चीज़ों को रोज़ की चीज़ बनाइए।',p4_tag:'नई ज़िंदगी',
+ p5_t:'रीसायकल / डिस्पोज़',p5_s:'जो अब न बचे — CPCB-अधिकृत केंद्र। सुरक्षित वज़न कबड़ीवाला को।',p5_tag:'ज़ीरो लैंडफ़िल',
+ cta_k:'भरोसे के साथ तय कीजिए',cta_t:'समझ नहीं आ रहा क्या करें? रेकार्ट साथ है।',
+ cta_s:'30 सेकंड में: लागत, बिक्री भाव, मरम्मत-योग्यता, और पास के असली ड्रॉप-पॉइंट।',
+ cta_b1:'मुफ़्त जाँच शुरू करें',cta_b2:'सैंपल हेडफ़ोन आज़माएँ',
+ an_k:'ऑब्जेक्ट इंटेलिजेंस',an_t:'इसका क्या करें?',an_s:'फ़ोटो लगाइए या सैंपल चुनिए — फ़ोटो आपके डिवाइस से बाहर नहीं जाते।',
+ drop_t1:'फ़ोटो यहाँ छोड़ें, या',drop_t2:'ब्राउज़ करें',drop_s:'PNG, JPG, WEBP, 20MB तक। दिन की रोशनी में सबसे सटीक।',
+ choose:'डिवाइस से चुनें',take:'फ़ोटो खींचें',pile:'पाइल मोड — 5+ कपड़े',
+ note_l:'नोट (वैकल्पिक)',year_l:'कब खरीदा था?',unsure:'पता नहीं',
+ samples_k:'या सैंपल से आज़माएँ:',smp1:'20 मिनट में बैटरी खत्म',smp2:'सर्दी की जैकेट (छोटी पड़ गई)',smp3:'रसोई का मिक्सर (इस्तेमाल में नहीं)',smp4:'कुर्सी (ढीली टाँग)',
+ ready:'स्कैन के लिए तैयार',replace:'फ़ोटो बदलें',privacy:'फ़ोटो की जाँच आपके डिवाइस पर ही होती है।',an_btn:'जाँच करें',
+ sc_k:'डिजिटल टेलीमेट्री',sc_t:'आपकी चीज़ की जाँच हो रही है…',sc_go:'फ़ैसला देखें',sc1:'फ़ोटो मिलीं — डिवाइस पर ही रहीं',
+ rs_meta:'3 फ़ोटो + ट्राइएज · अभी-अभी जाँच हुई',cert_k:'इस जाँच में कितना भरोसा',
+ verify_cta:'10 मिनट लगाइए — 90% तय करने के लिए',verify_done:'जाँच पक्की · 90%',
+ routes_k:'रास्ते',r_repair:'मरम्मत',r_sell:'बेचें',r_donate:'दान',r_reuse:'दोबारा इस्तेमाल',r_recycle:'रीसायकल',
+ fps_t:'सही दाम की जाँच',quote_k:'दुकान का भाव',upload:'या एस्टीमेट अपलोड करें',
+ fair:'ठीक',high:'ऊँचा',vhigh:'बहुत ऊँचा',delta_fair:'स्थानीय दर के भीतर',
+ pr3:'दर के पीछे तैयार भाव',pr4:'आख़िरी अपडेट',
+ ror_t:'मरम्मत या निकाल दें',cap60:'60% का नियम',
+ l_work:'ठीक होकर बिक्री',l_q:'मरम्मत का भाव',l_asis:'जैसा है बेचें',l_scrap:'पुर्ज़े और स्क्रैप',
+ alert_t:'यहाँ मरम्मत सस्ती नहीं',see_sell:'बिक्री के विकल्प देखें',keep_repair:'मरम्मत ही रखें',
+ shops_t:'आपके पास की दुकानें',rank_t:'कहाँ सबसे अच्छा बिकता है',rank_s:'मेहनत के हिसाब से कमाई',
+ ch1_n:'P2P बिक्री',ch1_s:'ख़ुद मिलिए ख़रीदारों से · OLX / मार्केटप्लेस',ch2_n:'इंस्टेंट बाय-बैक',ch2_s:'पिकअप पर दाम तय',
+ ch3_n:'दुकान पर बेचें',ch3_s:'सीताबुल्दी में',ch4_n:'ब्रांड एक्सचेंज',ch4_s:'नई ख़रीद के साथ ही',
+ ch5_n:'कबड़ीवाला — वज़न पर',ch5_s:'जब कुछ और न बचे',
+ tv1:'2–5 दिन',tv2:'आज',tv3:'उसी दिन',tv4:'नई ख़रीद के साथ',
+ scam_t:'लिस्ट करने से पहले दो धोखे जान लें',scam1_t:'फ़ौजी-पोस्टिंग वाला बायर',scam1_v:'असली बायर फ़ोन करता है। जल्दबाज़ी + QR — यही पैटर्न है, दूर हटिए।',
+ scam2_t:'\u201cपैसे लेने\u201d वाला QR',scam2_v:'QR स्कैन करने से पैसे जाते हैं, आते नहीं। असली बायर स्कैन नहीं माँगता।',
+ gen_cta:'P2P लिस्टिंग बनाएँ',gate_t:'दान की तैयारी',donate_cta:'इसे कोई घर दें',ngo_t:'किसे ज़रूरत है, आपके पास',
+ keep_cta:'देने का मन नहीं? पेटी में रखें',
+ pb_t:'दोबारा काम के तरीक़े',pb_s:'आज रात हो सके, उसी हिसाब से',
+ trades_t:'बाक़ी सबके लिए',tr1:'दर्ज़ी — सिलाई ₹150 से · सीताबुल्दी',tr2:'कलाई — बर्तनों की कलाई · जरीपटका',tr3:'मोची — बैग और जूते · धरमपेठ',
+ vault_t:'यादों की पेटी',vault_h:'जो क़ीमती है, रहने दें।',vault_i:'पापा की HMT घड़ी — 2009 में रुकी, फिर भी रखी है।',
+ vault_cap:'फ़ोटो, आवाज़ें, याद करने की तारीख़ें। भाव कभी नहीं।',vchip:'दिवाली से पहले देखें',
+ rc_t:'अधिकृत ड्रॉप-पॉइंट',split_t:'अपने कबड़ीवाला के साथ',split_s:'वज़न पर, जहाँ सुरक्षित हो',
+ safe_k:'वज़न पर सुरक्षित',auth_k:'सिर्फ़ अधिकृत केंद्र',sp1:'अख़बार',sp2:'स्टील के बर्तन',sp3:'लोहे का स्टैंड',sp4:'यह बैटरी — लिथियम',sp5:'CFL बल्ब — पारा',
+ bag_t:'पूरा बोरा दे रहे हैं?',hz_t:'ये पहले निकाल लें',
+ hz_b:'स्क्रैप यार्ड में लिथियम सेल चुभते हैं और आग पकड़ लेते हैं; CFL में पारा होता है। बाक़ी तौल दीजिए — बैटरी क्रोमा के बिन में।',
+ hz_link:'सबसे पास बैटरी बिन — क्रोमा, 2.4 km',
+ cp_k:'फ़ैसला कवर',cp_t:'रास्तों की तुलना',cp_s:'एक ही चीज़, पाँच भविष्य — आँकड़े साथ-साथ।',
+ cp_cost:'लागत',cp_net:'शुद्ध',cp2_s:'आज नक़द, साफ़ लिखा हुआ — कम मोल-भाव।',cp3_s:'जाँचे-परखे, नाम वाले स्थानीय ज़रूरत से मिलान।',cp4_s:'शून्य लागत, शून्य झंझट — चीज़ चलती रहे।',cp5_s:'CPCB-अधिकृत केंद्र से पुर्ज़ों की वापसी।',
+ cp_rule_t:'60% का नियम',cp_kab_t:'और कबड़ीवाला?',
+ items_t:'मेरी चीज़ें',seg_all:'सब',seg_vault:'पेटी',seg_proofs:'प्रमाण',
+ items_sum:'6 चीज़ें · करीब ₹18,900 बचत संभव',it_ready:'फ़ैसला तैयार',
+ it1_s:'बैटरी कमज़ोर · 65%',it2_n:'सर्दी की जैकेट ×2',it2_s:'छोटी पड़ गई · फ़ैसला तैयार',it3_n:'रसोई का मिक्सर',it3_s:'मोटर भिनभिनाती है · फ़ैसला तैयार',
+ it4_n:'स्टील का ट्रंक',it4_s:'कबड़ीवाला · वज़न पर',it5_n:'पापा की HMT घड़ी',it5_s:'रखी है, भाव नहीं',
+ pf_view:'देखें',pf1_t:'रीसायक्लिंग प्रमाणपत्र · Green Vision — बैटरी + 6 CFL · #GV-2214',pf2_t:'दान बाँटा गया · Snehalaya — 2 कुर्ते · 3 फ़ोटो',pf3_t:'मरम्मत रसीद · QuickFix — ₹850 चुकाए · दरें अपडेट होती हैं',
+ im_t:'आपका प्रभाव',im_s:'रसीदों पर आधारित, अंदाज़ों पर नहीं — हर आँकड़ा किसी प्रमाण से जुड़ा है।',
+ im1:'ई-वेस्ट लैंडफ़िल से बचा',im2:'चीज़ें नए घर पाईं',im3:'क़ीमत वापस मिली',
+ im_pfk:'प्रमाण, वादे नहीं',im_pf1:'रीसायक्लिंग प्रमाणपत्र दर्ज — Green Vision, CPCB-अधिकृत।',im_pf2:'दान की फ़ोटो Snehalaya ने पक्की कीं।',im_pf3:'मरम्मत रसीदें नागपुर की दरें गढ़ती हैं — गुमनाम रहकर।',
+ db_k:'भीड़ से जुड़ी समझ',db_t:'दर कैलिब्रेशन',db_s:'हर असली मरम्मत रसीद नागपुर के सबके लिए Fair Price Shield और पक्का करती है।',
+ db_askk:'एक टैप, गुमनाम',db_ask_s:'स्थानीय दर और सटीक होगी। बाहर के आँकड़े अपने-आप छँट जाते हैं।',
+ db_more:'दुकान को और दिक्कतें मिलीं',db_recent:'हाल की तैयार भाव',db_fresh:'लाइव · बाहर के छँटे',
+ db_r1:'बैटरी सेल, XM4 · 2 दुकानों के भाव',db_r2:'ईयर-पैड सिलाई · सीताबुल्दी दर्ज़ी',db_r3:'चार्जिंग पोर्ट, XM4 · \u201cऔर दिक्कतें मिलीं\u201d',
+ mv_t:'90% पक्का करें',mv_s:'दो जाँच, करीब दस मिनट। हर जाँच दूसरे कारण को हाँ या ना करती है।',mv_go:'फ़ैसला अपडेट करें',
+ ml_t:'P2P लिस्टिंग — झलक',ml_s:'बैटरी कमज़ोर — साफ़ लिखा है',ml_acc:'₹6,200 मानें',
+ ml_cap:'आपके जवाबों से भरी हुई। सच्ची लिस्टिंग ही स्कैम-शील्ड है — कम मोल-भाव, जल्दी बिक्री।',
+ ml_copy:'लिस्टिंग टेक्स्ट कॉपी करें',ml_share:'शेयर',
+ t_pile:'पाइल मोड को कैमरा चाहिए — यह फ़ोन बिल्ड में है',t_updated:'फ़ैसला अपडेट — 90% पक्का',
+ t_demo:'डेमो केस — पूरा बिल्ड इसे जोड़ता है',t_doc:'डॉक्यूमेंट व्यूअर यहीं खुलता है — पूरे बिल्ड में',
+ t_share:'शेयर डायलॉग यहीं खुलता है',t_copied:'लिस्टिंग कॉपी हुई',t_cal:'शुक्रिया — स्थानीय दर और पक्की हुई।',
+ t_one:'एक जाँच बाक़ी',t_home:'Anand Vidyalaya — रविवार को पिकअप · 3.2 km',
+ foot_r:'नागपुर पायलट · दरें 2 हफ़्ते पहले अपडेट · फ़ोटो आपके डिवाइस पर रहती हैं'
+},
+hg:{
+ hdr_sub:'Product Intelligence',hdr_cta:'Item check karein',
+ nav_home:'Home',nav_don:'Daan',nav_rep:'Repair',nav_reu:'Reuse',srch_ph:'Cheezein, guide, disposal dhundo — ya kuch bhi poocho',ask_ai:'AI se poocho',ai_t:'REKART Assistant',ai_ph:'Aage poocho…',ai_think:'Soch raha hai…',nav_analyze:'Check',nav_compare:'Raste compare',nav_reuse:'Reuse Studio',nav_items:'Meri cheezein',nav_impact:'Impact',nav_dash:'Dashboard',
+ nt_t:'Activity & Updates',nt_x:'Close',nt1_t:'Asli mein kitna laga?',nt1_s:'Aapki Sony rasid Sitabuldi ki battery dar aur pakki karegi.',
+ nt2_t:'Kal pickup',nt2_s:'Snehalaya kal 4 ooni kapde lene aayega, 11–1 baje.',
+ fill:'Sample bharein',demo_t:'Demo data',demo_k:'Sample item load karein',demo_v:'Verify 90%',demo_g:'Gate bharein',demo_r:'Reset',
+ t_loaded:'sample load — faisla taiyar',
+ hero_badge:'Intelligent second-life engine · Nagpur pilot',hero_t1:'Har cheez ko dijiye',hero_t2:'ek behtar agla kadam.',
+ hero_s:'REKART batata hai — repair, bikri, daan, dobara istemal ya recycle — har aankde ke peeche Nagpur ke asli bhaav.',
+ hero_cta1:'Item check karein',hero_cta2:'REKART kaise kaam karta hai',
+ stat1:'cheezein redirected',stat2:'Nagpur ki live dar',stat3:'faisle tak',
+ hc_k:'Transformation sequence',hc_unused:'Bekar padi cheez',hc_fate:'Anishchit haalat',hc_sub:'14 mahine se drawer mein padi hai',
+ hc_engine:'REKART multi-factor evaluation',hc_rec:'Sujhaya rasta',hc_title:'Battery repair & recalibration',
+ hc_body:'Hardware 88% theek hai. ₹850 ka cell ₹14,500 ki bikri zinda rakhta hai.',hc_alt:'Alternates:',hc_foot:'Na dosh, na jhijhak.',hc_try:'Apni cheez se try karein →',
+ hiw_k:'Chaar-kadam ka hal',hiw_t:'Jhijhak ko REKART kaise badalta hai kaam mein',
+ hiw_s:'Zyadatar cheezein isliye jamti hain kyunki faisle mein research lagti hai. REKART yeh seconds mein nipata deta hai.',
+ st1_t:'Photo lagaiye',st1_s:'Photo khinchiye ya kheech laaiye — koi form nahin.',st2_t:'Haalat ki jaanch',st2_s:'Ghisav, material, bikri dar — sab device par hi.',
+ st3_t:'Faisla paiye',st3_s:'Ek mukhya sujhav, saaf alternates saath mein.',st4_t:'Kaam kijiye',st4_s:'Repair book karein, listing banayein, pickup bulayein, ya drop-point dekhein.',
+ paths_k:'Poora faisla cover',paths_t:'Paanch raste. Har ghar ki cheez.',paths_cta:'Comparison dekhein',
+ p1_t:'Repair',p1_s:'Ghise purje, cell, joote ke sol — 80–95% value bacha rahe.',p1_tag:'Sabse lambi zindagi',
+ p2_t:'Sell',p2_s:'Turant bhaav aur pehle se bhari listing.',p2_tag:'Seedha paisa',
+ p3_t:'Donate',p3_s:'Jaanche-pehkhe local ashram aur schools se seedha milaan.',p3_tag:'Turant samaj-kalyan',
+ p4_t:'Reuse & Upcycle',p4_s:'Apni hi cheezon ko roz ki cheez banaiye.',p4_tag:'Nayi zindagi',
+ p5_t:'Recycle / Dispose',p5_s:'Jo ab na bachhe — CPCB-adhikrit kendra. Safe wajan kabadiwale ko.',p5_tag:'Zero landfill',
+ cta_k:'Bharose ke saath tay kijiye',cta_t:'Samajh nahin aa raha kya karein? REKART saath hai.',
+ cta_s:'30 second mein: lagat, bikri bhaav, repair-yogya, aur paas ke asli drop-point.',
+ cta_b1:'Muft jaanch shuru karein',cta_b2:'Sample headphones try karein',
+ an_k:'Object Intelligence',an_t:'Iska kya karein?',an_s:'Photo lagaiye ya sample chuniye — photo aapke device se bahar nahin jaate.',
+ drop_t1:'Photo yahan chhodiye, ya',drop_t2:'browse karein',drop_s:'PNG, JPG, WEBP, 20MB tak. Din ki roshni mein sabse sateek.',
+ choose:'Device se chunein',take:'Photo khinchein',pile:'Pile mode — 5+ kapde',
+ note_l:'Note (optional)',year_l:'Kab khareeda tha?',unsure:'Pata nahin',
+ samples_k:'Ya sample se try karein:',smp1:'20 minute mein battery khatam',smp2:'Sardi ki jacket (chhoti pad gayi)',smp3:'Rasoi ka mixer (istemal mein nahin)',smp4:'Kursi (dheeli taang)',
+ ready:'Scan ke liye taiyar',replace:'Photo badlein',privacy:'Photo ki jaanch aapke device par hi hoti hai.',an_btn:'Jaanch karein',
+ sc_k:'Digital telemetry',sc_t:'Aapki cheez ki jaanch ho rahi hai…',sc_go:'Faisla dekhein',sc1:'Photo mili — device par hi rahin',
+ rs_meta:'3 photo + triage · abhi-abhi jaanch hui',cert_k:'Is jaanch mein kitna bharosa',
+ verify_cta:'10 minute lagaiye — 90% pakka karne ke liye',verify_done:'Pakka · 90%',
+ routes_k:'Raste',r_repair:'Repair',r_sell:'Sell',r_donate:'Donate',r_reuse:'Reuse',r_recycle:'Recycle',
+ fps_t:'Sahi daam ki jaanch',quote_k:'Dukaan ka bhaav',upload:'ya estimate upload karein',
+ fair:'Theek',high:'Zyada',vhigh:'Bahut zyada',delta_fair:'local dar ke bheetar',
+ pr3:'Dar ke peeche taiyaar bhaav',pr4:'Aakhri update',
+ ror_t:'Repair ya nikal dein',cap60:'60% KA NIYAM',
+ l_work:'Theek hokar bikri',l_q:'Repair ka bhaav',l_asis:'Jaisa hai bechein',l_scrap:'Purje aur scrap',
+ alert_t:'Yahan repair sasti nahin',see_sell:'Sell options dekhein',keep_repair:'Repair hi rakhein',
+ shops_t:'Aapke paas ki dukaanein',rank_t:'Kahan sabse achha bikta hai',rank_s:'MEHNAT KE HISAAB SE KAMAI',
+ ch1_n:'P2P bikri',ch1_s:'Khud miliye khareedaron se · OLX / Marketplace',ch2_n:'Instant buy-back',ch2_s:'Pickup par daam tay',
+ ch3_n:'Dukaan par bechein',ch3_s:'Sitabuldi mein',ch4_n:'Brand exchange',ch4_s:'Nayi kharid ke saath hi',
+ ch5_n:'Kabadiwala — wajan par',ch5_s:'Jab kuch aur na bache',
+ tv1:'2–5 din',tv2:'aaj',tv3:'usi din',tv4:'nayi kharid ke saath',
+ scam_t:'List karne se pehle do dhokhe jaan lein',scam1_t:'Fauji-posting wala buyer',scam1_v:'Asli buyer phone karta hai. Jaldi + QR — yahi pattern hai, door hatiye.',
+ scam2_t:'\u201cPaise lene\u201d wala QR',scam2_v:'QR scan karne se paise jaate hain, aate nahin. Asli buyer scan nahin maangta.',
+ gen_cta:'P2P listing banayein',gate_t:'Daan ki taiyari',donate_cta:'Ise koi ghar dein',ngo_t:'Kise zaroorat hai, aapke paas',
+ keep_cta:'Dene ka mann nahin? Peti mein rakhein',
+ pb_t:'Dobara kaam ke tarike',pb_s:'AAJ RAAT HO SAKE, USI HISAAB SE',
+ trades_t:'Baaki sabke liye',tr1:'Darzi — silai ₹150 se · Sitabuldi',tr2:'Kalhai — bartanon ki kalai · Jaripatka',tr3:'Mochi — bag aur joote · Dharampeth',
+ vault_t:'Yaadon ki peti',vault_h:'Jo keemti hai, rehne dein.',vault_i:'Papa ki HMT ghadi — 2009 mein ruki, phir bhi rakhi hai.',
+ vault_cap:'Photo, aawaazein, yaad karne ki tareekhein. Bhaav kabhi nahin.',vchip:'Diwali se pehle dekhein',
+ rc_t:'Adhikrit drop-point',split_t:'Apne kabadiwale ke saath',split_s:'WAJAN PAR, JAHAN SURAKSHIT HO',
+ safe_k:'Wajan par surakshit',auth_k:'Sirf adhikrit kendra',sp1:'Akhbaar',sp2:'Steel ke bartan',sp3:'Loha ka stand',sp4:'Yeh battery — lithium',sp5:'CFL bulb — paara',
+ bag_t:'Poora bora de rahe hain?',hz_t:'Ye pehle nikal lein',
+ hz_b:'Scrap yard mein lithium cell chubhte hain aur aag pakad lete hain; CFL mein paara hota hai. Baaki taaul dijiye — battery Croma ke bin mein.',
+ hz_link:'Sabse paas battery bin — Croma, 2.4 km',
+ cp_k:'Faisla cover',cp_t:'Raste compare karein',cp_s:'Ek hi cheez, paanch bhavishya — aankde saath-saath.',
+ cp_cost:'lagat',cp_net:'net',cp2_s:'Aaj cash, saaf likha hua — kam mol-bhaav.',cp3_s:'Jaanche-pehkhe, naam wale local zaroorat se milaan.',cp4_s:'Zero lagat, zero jhanjhat — cheez chalti rahe.',cp5_s:'CPCB-adhikrit kendra se purjon ki wapsi.',
+ cp_rule_t:'60% ka niyam',cp_kab_t:'Aur kabadiwala?',
+ items_t:'Meri cheezein',seg_all:'Sab',seg_vault:'Peti',seg_proofs:'Pramaan',
+ items_sum:'6 cheezein · kareeb ₹18,900 bachat sambhav',it_ready:'Faisla taiyar',
+ it1_s:'Battery kharab · 65%',it2_n:'Sardi ki jacket ×2',it2_s:'Chhoti pad gayi · faisla taiyar',it3_n:'Rasoi ka mixer',it3_s:'Motor bhinbhinati hai · faisla taiyar',
+ it4_n:'Steel ka trunk',it4_s:'Kabadiwala · wajan par',it5_n:'Papa ki HMT ghadi',it5_s:'Rakhi hai, bhaav nahin',
+ pf_view:'Dekhein',pf1_t:'Recycling pramaanpatra · Green Vision — battery + 6 CFL · #GV-2214',pf2_t:'Daan baanta gaya · Snehalaya — 2 kurte · 3 photo',pf3_t:'Repair rasid · QuickFix — ₹850 chukaye · dar update hoti hain',
+ im_t:'Aapka impact',im_s:'Rasidon par aadharit, andazon par nahin — har aankda kisi pramaan se juda hai.',
+ im1:'e-waste landfill se bacha',im2:'cheezein naye ghar paayin',im3:'keemat wapas mili',
+ im_pfk:'Pramaan, vaade nahin',im_pf1:'Recycling pramaanpatra darj — Green Vision, CPCB-adhikrit.',im_pf2:'Daan ki photo Snehalaya ne pakki kin.',im_pf3:'Repair rasidein Nagpur ki dar ghadti hain — gumnaam rehkar.',
+ db_k:'Bheed se judi samajh',db_t:'Dar calibration',db_s:'Har asli repair rasid Nagpur ke sabke liye Fair Price Shield aur pakka karti hai.',
+ db_askk:'Ek tap, gumnaam',db_ask_s:'Local dar aur sateek hogi. Bahar ke aankde apne-aap chhan jaate hain.',
+ db_more:'Dukaan ko aur dikkat mili',db_recent:'Haal ki taiyaar bhaav',db_fresh:'LIVE · OUTLIERS FILTERED',
+ db_r1:'Battery cell, XM4 · 2 dukaanon ke bhaav',db_r2:'Ear-pad silai · Sitabuldi darzi',db_r3:'Charging port, XM4 · \u201caur dikkat mili\u201d',
+ mv_t:'90% pakka karein',mv_s:'Do jaanch, kareeb das minute. Har jaanch doosre kaaran ko haan ya na karti hai.',mv_go:'Faisla update karein',
+ ml_t:'P2P listing — jhalak',ml_s:'Battery kharab — saaf likha hai',ml_acc:'₹6,200 maanein',
+ ml_cap:'Aapke jawaabon se bhari hui. Sachchi listing hi scam-shield hai — kam mol-bhaav, jaldi bikri.',
+ ml_copy:'Listing text copy karein',ml_share:'Share',
+ t_pile:'Pile mode ko camera chahiye — yeh phone build mein hai',t_updated:'Faisla update — 90% pakka',
+ t_demo:'Demo case — poora build ise jodta hai',t_doc:'Document viewer yahin khulta hai — poore build mein',
+ t_share:'Share dialog yahin khulta hai',t_copied:'Listing copy ho gayi',t_cal:'Shukriya — local dar aur pakki hui.',
+ t_one:'Ek jaanch baaki',t_home:'Anand Vidyalaya — Ravivar ko pickup · 3.2 km',
+ foot_r:'Nagpur pilot · dar 2 hafte pehle update · photo aapke device par rehti hain'
+}};
+let LANG='en';
+const t=k=>I18N[LANG][k]??I18N.en[k]??k;
+const pt=k=>(PI[P.id][LANG]&&PI[P.id][LANG][k])??PI[P.id].en[k]??'';
+
+const TPL={
+ fpsMeta:{en:()=>`${D.qc} QUOTES · 2 WKS`,hi:()=>`${D.qc} भाव · 2 हफ़्ते`,hg:()=>`${D.qc} BHAAV · 2 HAFTE`},
+ prov:{en:()=>`Parts + labour · ${D.qc} Nagpur quotes · calibrated 2 weeks ago`,hi:()=>`पुर्ज़े + मज़दूरी · नागपुर के ${D.qc} भाव · 2 हफ़्ते पहले अपडेट`,hg:()=>`Purje + mazdoori · Nagpur ke ${D.qc} bhaav · 2 hafte pehle update`},
+ be:{en:()=>`break-even ₹${f(D.be)}`,hi:()=>`बराबर ₹${f(D.be)}`,hg:()=>`barabar ₹${f(D.be)}`},
+ dHigh:{en:d=>`₹${f(d)} above the band`,hi:d=>`दर से ₹${f(d)} ऊपर`,hg:d=>`dar se ₹${f(d)} upar`},
+ dVHigh:{en:d=>`₹${f(d)} above the band\u2019s ceiling`,hi:d=>`दर की ऊपरी सीमा से ₹${f(d)} ऊपर`,hg:d=>`dar ki upri seema se ₹${f(d)} upar`},
+ netWin:{en:q=>`At ₹${f(q)}, repair nets ₹${f(D.working-q)} — ₹${f(D.be-q)} ahead of selling as-is.`,hi:q=>`₹${f(q)} में मरम्मत — कुल ₹${f(D.working-q)}, जैसा-का-वैसा बेचने से ₹${f(D.be-q)} ज़्यादा।`,hg:q=>`₹${f(q)} mein repair — total ₹${f(D.working-q)}, as-is bechne se ₹${f(D.be-q)} zyada.`},
+ netEven:{en:()=>`₹${f(D.be)} is break-even — repairing and selling as-is net the same.`,hi:()=>`₹${f(D.be)} बराबर की सीमा है — मरम्मत और जैसा-का-वैसा बिक्री बराबर।`,hg:()=>`₹${f(D.be)} break-even hai — repair aur as-is bikri barabar.`},
+ netLose:{en:q=>`At ₹${f(q)}, selling as-is nets ₹${f(q-D.be)} more than repairing.`,hi:q=>`₹${f(q)} पर जैसा-का-वैसा बेचना ₹${f(q-D.be)} ज़्यादा देगा।`,hg:q=>`₹${f(q)} par as-is bechna ₹${f(q-D.be)} zyada dega.`},
+ alertB:{en:(q,p)=>`₹${f(q)} is ${p}% of what this item sells for working — past the ₹${f(D.be)} break-even. It also loses about ₹${f(D.decay)} of value a month while you decide.`,hi:(q,p)=>`₹${f(q)} इस चीज़ की ठीक-ठाक क़ीमत का ${p}% है — ₹${f(D.be)} की बराबरी भी टूट चुकी है। और फ़ैसला टालते-टालते हर महीने करीब ₹${f(D.decay)} का नुक़सान।`,hg:(q,p)=>`₹${f(q)} cheez ki working value ke ${p}% hai — ₹${f(D.be)} break-even bhi toot chuka hai. Aur taalte-taalte har mahine kareeb ₹${f(D.decay)} ka nuksaan.`},
+ gateSuf:{en:n=>` · ${n} of 3 ready`,hi:n=>` · ${n}/3 तैयार`,hg:n=>` · ${n}/3 taiyar`},
+ left:{en:n=>`${n} checks to go`,hi:n=>`${n} जाँचें बाक़ी`,hg:n=>`${n} jaanch baaki`},
+ cp1s:{en:()=>`Keeps ₹${f(D.working)} of working resale alive for ₹${f(D.quote)}.`,hi:()=>`₹${f(D.quote)} में ₹${f(D.working)} की बिक्री ज़िंदा रखता है।`,hg:()=>`₹${f(D.quote)} mein ₹${f(D.working)} ki bikri zinda rakhta hai.`},
+ cpRule:{en:()=>`If a repair quote crosses 60% of working resale — here ₹${f(D.rule)} — the math stops favoring repair. REKART flags it automatically.`,hi:()=>`अगर मरम्मत का भाव ठीक-ठाक बिक्री का 60% पार कर जाए — यहाँ ₹${f(D.rule)} — तो गणित मरम्मत के पक्ष में नहीं रहता। रेकार्ट ख़ुद बता देता है।`,hg:()=>`Agar repair ka bhaav working bikri ke 60% paar kar jaaye — yahan ₹${f(D.rule)} — toh math repair ke paksh mein nahin rehta. REKART khud bata deta hai.`},
+ cpKab:{en:()=>`₹${f(P.sell[4])} by weight — a fair floor when nothing else applies. Newspapers, steel and iron go to them; lithium and mercury never do.`,hi:()=>`₹${f(P.sell[4])} वज़न पर — जब कुछ और न बचे तो ठीक आधार। अख़बार, स्टील, लोहा उन्हें; लिथियम और पारा कभी नहीं।`,hg:()=>`₹${f(P.sell[4])} wajan par — jab kuch aur na bache toh theek aadhar. Akhbaar, steel, loha unko; lithium aur paara kabhi nahin.`},
+ dbAsk:{en:()=>`The ${P.name} repair — what did it actually cost?`,hi:()=>`${P.name} की मरम्मत — असल में कितनी पड़ी?`,hg:()=>`${P.name} ki repair — asli mein kitni padi?`}
+};
+const tp=(k,...a)=>TPL[k][LANG](...a);
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2400);}
+
+/* ---------- icons ---------- */
+function icons(){if(window.lucide){try{lucide.createIcons()}catch(e){}}}
+
+/* ---------- navigation ---------- */
+function navigateTo(id){
+  $$('.screen-view').forEach(s=>s.classList.add('hidden'));
+  const el=document.getElementById('screen-'+id); if(el)el.classList.remove('hidden');
+  $$('.nav-btn').forEach(b=>{
+    const on=b.dataset.target===id;
+    b.classList.toggle('bg-white',on);b.classList.toggle('shadow-sm',on);
+    b.classList.toggle('text-brand-900',on);b.classList.toggle('font-semibold',on);
+    b.classList.toggle('text-stone-600',!on);
+  });
+  $('#notificationDrawer').classList.add('hidden');
+  window.scrollTo({top:0,behavior:'auto'});
+  if(id==='results'&&!S.ringDrawn){S.ringDrawn=true;setTimeout(()=>setCert(S.verified?90:D.cert),380);}
+  icons();
+}
+function scrollToSection(id){document.getElementById(id).scrollIntoView({behavior:'smooth'});}
+function toggleNotificationPanel(){$('#notificationDrawer').classList.toggle('hidden');}
+
+/* ---------- language ---------- */
+function applyLang(l){
+  LANG=l;
+  document.documentElement.lang=l==='hi'?'hi':(l==='hg'?'hi-Latn':'en');
+  $$('.lang-btn').forEach(b=>{
+    const lbl=b.textContent.trim();
+    const on=(l==='en'&&lbl==='EN')||(l==='hi'&&lbl==='हिं')||(l==='hg'&&lbl==='Hinglish');
+    b.classList.toggle('bg-white',on);b.classList.toggle('shadow-sm',on);b.classList.toggle('text-brand-900',on);b.classList.toggle('text-stone-500',!on);
+  });
+  $$('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));
+  renderProfile();
+}
+window.applyLang=applyLang;
+
+/* ---------- profile loading (the sample-data engine) ---------- */
+function loadProfile(id,opts={}){
+  P=PROFILES[id];D={...P.d};
+  S.item=id;S.verified=false;S.alertOff=false;S.route=P.route;S.quote=P.d.quote;S.ringDrawn=false;
+  $('#itemCustomNote').value=pt('note');
+  $('#itemAgeSelect').value=P.age;
+  // show preview on analyze
+  $('#uploadPlaceholder').classList.add('hidden');
+  const c=$('#uploadPreviewContainer');c.classList.remove('hidden');c.classList.add('flex');
+  $('#previewImage').classList.add('hidden');
+  $('#previewIcon').classList.remove('hidden');$('#previewIcon').classList.add('flex');
+  S.hasItem=true;$('#btnStartAnalysis').disabled=false;
+  renderProfile();
+  if(opts.jump)navigateTo('results');
+}
+function loadSampleItem(id){loadProfile(id);navigateTo('analyze');}
+window.loadProfile=loadProfile;window.loadSampleItem=loadSampleItem;
+
+function renderProfile(){
+  if(!P)return;
+  $('#vName').textContent=P.name;
+  $('#vHeadline').textContent=pt('headline');
+  $('#certNum').textContent=D.cert;setCert(D.cert);
+  $('#hypMainTxt').textContent=pt(S.verified?'hMainC':'hMain');
+  $('#hypAltTxt').textContent=pt(S.verified?'hAltC':'hAlt');
+  // safety tier
+  const tier={green:['bg-brand-50','border-brand-200/70','text-brand-800'],amber:['bg-amber-50','border-amber-200/70','text-amber-800'],red:['bg-red-50','border-red-200/70','text-red-700']}[P.safety];
+  const sc=$('#safetyCard');sc.className='rounded-3xl p-5 border '+tier[0]+' '+tier[1];
+  $('#safetyT').className='flex items-center gap-2 font-bold text-sm '+tier[2];
+  $('#safetyTT').textContent=pt('safetyT');
+  $('#safetyS').textContent=pt('safetyS');
+  $('#safetyS').className='text-xs mt-1.5 leading-relaxed '+(P.safety==='red'?'text-red-900/70':P.safety==='green'?'text-brand-900/70':'text-amber-900/70');
+  // recommended route dot
+  $$('.route-btn').forEach(b=>b.classList.toggle('rec',b.dataset.r===P.route));
+  // fps meta / prov
+  $('#fpsMeta').textContent=tp('fpsMeta');
+  $('#provLbl').textContent=tp('prov');
+  $('#qcCount').textContent=D.qc;
+  // presets
+  $('#presetWrap').innerHTML=P.presets.map(q=>`<button class="preset-chip px-3 py-1.5 rounded-full border text-xs font-semibold bg-white text-stone-700 border-stone-300 transition-all" data-q="${q}" onclick="setQuotePreset(${q})">₹${f(q)}</button>`).join('');
+  // gauge geometry
+  const lo=D.bandLo/D.gmax*100,wd=(D.bandHi-D.bandLo)/D.gmax*100,hp=D.bandHi/D.gmax*100;
+  $('#gBand').style.left=lo+'%';$('#gBand').style.width=wd+'%';
+  $('#gScale').innerHTML=`<span style="left:0">₹0</span><span style="left:${lo}%;transform:translateX(-50%)">₹${f(D.bandLo)}</span><span style="left:${hp}%;transform:translateX(-50%)">₹${f(D.bandHi)}</span><span style="right:0">₹${f(D.gmax)}</span>`;
+  // prov rows
+  $('#pr1').textContent=pt('pr1');$('#pr1v').textContent=D.pr1v;
+  $('#pr2').textContent=pt('pr2');$('#pr2v').textContent=D.pr2v;
+  // bars
+  $('#barWorkV').textContent='₹'+f(D.working);
+  $('#barAsisV').textContent='₹'+f(D.asis);$('#barAsisF').style.width=(D.asis/D.working*100)+'%';
+  $('#barScrapV').textContent='₹'+f(D.scrap);$('#barScrapF').style.width=(D.scrap/D.working*100)+'%';
+  $('#beLine').style.left=`calc(148px + (100% - 148px - 76px)*${(D.be/D.working).toFixed(3)})`;
+  $('#beLbl').textContent=tp('be');
+  // ask / shops
+  $('#ask1').textContent=pt('ask1');$('#ask2').textContent=pt('ask2');$('#ask3').textContent=pt('ask3');
+  $('#shopAn').textContent=pt('shopA');$('#shopAs').textContent=pt('shopAs');
+  $('#shopBn').textContent=pt('shopB');$('#shopBs').textContent=pt('shopBs');
+  // sell payouts
+  P.sell.forEach((v,i)=>{const el=$('#sellV'+(i+1));el.textContent=v?('₹'+f(v)):'—';$('#sellR'+(i+1)).classList.toggle('opacity-40',v==null);});
+  // donation gate (preserve done count)
+  const done=Math.min($$('.ckrow.done').length,3);
+  $('#gateWrap').innerHTML=[1,2,3].map(i=>`<div class="ckrow${i<=done?' done':''}"><span class="ck"><span class="ck-in"></span></span><div><b class="block text-sm">${pt('g'+i+'n')}</b><span class="text-xs text-stone-500">${pt('g'+i+'s')}</span></div></div>`).join('');
+  bindGate();
+  $('#ng1s').textContent=pt('ng1s');$('#ng2s').textContent=pt('ng2s');
+  // reuse ideas
+  $('#ideaWrap').innerHTML=`
+    <div class="border-b border-stone-100 pb-4"><b class="block text-sm">${pt('i1t')}</b><span class="text-xs text-stone-400">${pt('i1m')}</span>
+      <div class="mt-3 space-y-1.5 text-[13px] text-stone-600"><div class="flex gap-2.5"><b class="text-stone-400">1</b><span>${pt('i1s')}</span></div></div></div>
+    <div class="pt-4"><b class="block text-sm">${pt('i2t')}</b><span class="text-xs text-stone-400">${pt('i2m')}</span>
+      <div class="mt-3 space-y-1.5 text-[13px] text-stone-600"><div class="flex gap-2.5"><b class="text-stone-400">1</b><span>${pt('i2s1')}</span></div>${pt('i2s2')?`<div class="flex gap-2.5"><b class="text-stone-400">2</b><span>${pt('i2s2')}</span></div>`:''}</div></div>`;
+  // verify modal
+  $('#mv1t').textContent=pt('v1t');$('#mv1s').textContent=pt('v1s');
+  $('#mv2t').textContent=pt('v2t');$('#mv2s').textContent=pt('v2s');
+  resetVerifyModal();
+  // item icons everywhere
+  $$('.picon').forEach(ic=>ic.classList.toggle('on',ic.dataset.p===P.id));
+  // compare + dashboard
+  renderCompare();
+  $('#dbAskT').textContent=tp('dbAsk');
+  setRoute(S.route);
+  setQuote(S.quote);
+}
+
+function renderCompare(){
+  $('#cpRepair').textContent='₹'+f(D.quote);
+  $('#cpSell').textContent='₹'+f(D.asis);
+  $('#cpDonate').textContent=pt('cpv');
+  $('#cpRecycle').textContent='₹'+f(D.scrap);
+  $('#cp1s').textContent=tp('cp1s');
+  $('#cpRules').textContent=tp('cpRule');
+  $('#cpKabs').textContent=tp('cpKab');
+}
+
+/* ---------- upload ---------- */
+function showPreview(src){
+  $('#uploadPlaceholder').classList.add('hidden');
+  const c=$('#uploadPreviewContainer');c.classList.remove('hidden');c.classList.add('flex');
+  $('#previewIcon').classList.add('hidden');$('#previewIcon').classList.remove('flex');
+  $('#previewImage').classList.remove('hidden');
+  if(src)$('#previewImage').src=src;
+  S.hasItem=true;$('#btnStartAnalysis').disabled=false;
+}
+function resetUpload(){
+  $('#uploadPlaceholder').classList.remove('hidden');
+  const c=$('#uploadPreviewContainer');c.classList.add('hidden');c.classList.remove('flex');
+  $('#previewImage').src='';$('#fileInput').value='';
+  S.hasItem=false;$('#btnStartAnalysis').disabled=true;
+}
+function handleFileSelect(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>showPreview(ev.target.result);r.readAsDataURL(file);}
+function handleDragOver(e){e.preventDefault();$('#dropZone').classList.add('border-brand-500','bg-brand-50/30');}
+function handleDragLeave(){$('#dropZone').classList.remove('border-brand-500','bg-brand-50/30');}
+function handleDrop(e){e.preventDefault();handleDragLeave();const file=e.dataTransfer.files[0];if(file){const r=new FileReader();r.onload=ev=>showPreview(ev.target.result);r.readAsDataURL(file);}}
+function triggerWebcamMock(){toast(t('t_pile'));}
+
+/* ---------- small sample buttons ---------- */
+function fillRandomSample(){
+  const ids=Object.keys(PROFILES).filter(k=>k!==P.id);
+  loadProfile(ids[Math.floor(Math.random()*ids.length)]);
+  toast(P.name+' · '+t('t_loaded'));
+}
+function fillGate(){$$('.ckrow').forEach(r=>r.classList.add('done'));renderGate();}
+window.fillRandomSample=fillRandomSample;window.fillGate=fillGate;
+
+/* ---------- demo panel ---------- */
+function toggleDemoPanel(){$('#demoPanel').classList.toggle('hidden');}
+function demoLoad(id){loadProfile(id,{jump:true});toast(P.name+' · '+t('t_loaded'));toggleDemoPanel();}
+function demoVerify(){
+  if(!S.verified){S.verified=true;setCert(90);countTo($('#certNum'),D.cert,90,900);renderVerdict();toast(t('t_updated'));}
+  toggleDemoPanel();
+}
+function demoReset(){loadProfile('headphones');navigateTo('home');toggleDemoPanel();}
+window.toggleDemoPanel=toggleDemoPanel;window.demoLoad=demoLoad;window.demoVerify=demoVerify;window.demoReset=demoReset;
+
+/* ---------- scanning ---------- */
+function startAIAnalysis(){
+  if(!S.hasItem)return;
+  navigateTo('ai-scanning');
+  if(S.scanning)return;S.scanning=true;
+  $('#scanGo').classList.add('hidden');
+  const wrap=$('#scanSteps');wrap.innerHTML='';
+  const steps=[t('sc1'),pt('scanMatch'),pt('sc3')];
+  let i=0;
+  (function nx(){
+    if(i<steps.length){
+      const d=document.createElement('div');d.className='dstep';
+      d.innerHTML='<span class="dk"></span><span class="text-sm text-stone-600 font-medium"></span>';
+      d.lastChild.textContent=steps[i];
+      wrap.appendChild(d);
+      requestAnimationFrame(()=>d.classList.add('in'));
+      setTimeout(()=>{d.classList.add('ok');i++;nx();},900);
+    }else{S.scanning=false;$('#scanGo').classList.remove('hidden');}
+  })();
+}
+
+/* ---------- quote engine ---------- */
+function setCert(p){$('#ringFill').style.strokeDashoffset=(CIRC*(1-p/100)).toFixed(1);}
+function countTo(el,from,to,ms){const t0=performance.now();(function fn(t){const k=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-k,3);el.textContent=Math.round(from+(to-from)*e);if(k<1)requestAnimationFrame(fn);})(t0);}
+
+function setQuote(q){
+  S.quote=q;
+  $$('.preset-chip').forEach(c=>{
+    const on=+c.dataset.q===q;
+    c.classList.toggle('bg-brand-900',on);c.classList.toggle('text-white',on);c.classList.toggle('border-brand-900',on);
+    c.classList.toggle('bg-white',!on);c.classList.toggle('text-stone-700',!on);c.classList.toggle('border-stone-300',!on);
+  });
+  const vPill=$('#vPill'),vDelta=$('#vDelta'),gauge=$('#gauge'),gMarker=$('#gMarker'),gFlag=$('#gFlag'),
+        qFill=$('#qFill'),qVal=$('#qVal'),netLine=$('#netLine'),alertCard=$('#alertCard'),alertBody=$('#alertBody');
+  const vpCls={fair:'bg-brand-100 text-brand-800',high:'bg-amber-100 text-amber-800',vhigh:'bg-red-100 text-red-700',none:'bg-stone-100 text-stone-500'};
+  if(!q){
+    gauge.classList.add('empty');vPill.textContent='—';vPill.className='px-2.5 py-1 rounded-full text-xs font-bold '+vpCls.none;
+    vDelta.textContent='—';qFill.style.width='0%';qVal.textContent='—';netLine.textContent='—';alertCard.classList.add('hidden');return;
+  }
+  gauge.classList.remove('empty');
+  const p=Math.max(0,Math.min(100,q/D.gmax*100));
+  gMarker.style.left=p+'%';gFlag.textContent='₹'+f(q);
+  gFlag.classList.toggle('fr',p>86);gFlag.classList.toggle('fl',p<14);
+  let v,txt;
+  if(q<=D.bandHi){v='fair';txt=t('delta_fair');}
+  else if(q<=D.mid){v='high';txt=tp('dHigh',q-D.bandHi);}
+  else{v='vhigh';txt=tp('dVHigh',q-D.bandHi);}
+  S.verdict=v;
+  vPill.textContent=t(v);vPill.className='px-2.5 py-1 rounded-full text-xs font-bold '+vpCls[v];vDelta.textContent=txt;
+  qFill.style.width=Math.max(1,Math.min(100,q/D.working*100))+'%';qVal.textContent='₹'+f(q);
+  if(q<D.be-((D.be-D.bandHi)||1)*0+ -0){}
+  if(q<D.be&&D.be-q>0&&q<D.be){netLine.textContent=tp('netWin',q);}
+  if(q>=D.be-((D.working-D.be)*0.02)&&q<=D.be+((D.working-D.be)*0.02)){netLine.textContent=tp('netEven');}
+  else if(q>D.be)netLine.textContent=tp('netLose',q);
+  const pct=Math.round(q/D.working*100);
+  if(q>D.rule&&!S.alertOff){alertBody.textContent=tp('alertB',q,pct);alertCard.classList.remove('hidden');}
+  else alertCard.classList.add('hidden');
+}
+function setQuotePreset(q){$('#quoteInput').value=f(q);setQuote(q);}
+const qi=$('#quoteInput');
+qi.addEventListener('input',()=>{
+  const d=qi.value.replace(/\D/g,'').slice(0,6);
+  qi.value=d?f(+d):'';
+  const len=qi.value.length;qi.setSelectionRange(len,len);
+  setQuote(+d||0);
+});
+
+/* ---------- routes ---------- */
+function setRoute(r){
+  S.route=r;
+  $$('.route-btn').forEach(b=>{
+    const on=b.dataset.r===r;
+    b.classList.toggle('bg-brand-900',on);b.classList.toggle('border-brand-900',on);b.classList.toggle('text-white',on);
+    b.classList.toggle('bg-white',!on);b.classList.toggle('border-stone-300',!on);b.classList.toggle('text-stone-600',!on);
+  });
+  $$('.panel').forEach(p=>p.classList.toggle('hidden',p.id!=='pnl-'+r));
+}
+window.setRoute=setRoute;
+
+/* ---------- verdict render ---------- */
+function renderVerdict(){
+  $('#hypMainTxt').textContent=pt(S.verified?'hMainC':'hMain');
+  $('#hypAltTxt').textContent=pt(S.verified?'hAltC':'hAlt');
+  const vb=$('#verifyBtn');
+  if(S.verified){vb.textContent=t('verify_done');vb.classList.add('opacity-60','cursor-default');}
+  else{vb.textContent=t('verify_cta');vb.classList.remove('opacity-60','cursor-default');}
+  setQuote(S.quote);renderGate();
+}
+
+/* ---------- verify flow ---------- */
+const vsDone=new Set();
+function resetVerifyModal(){
+  vsDone.clear();$('#vGo').disabled=true;
+  $$('.vstep').forEach(s=>s.classList.remove('done','checking'));
+}
+ $$('.vstep').forEach(step=>step.addEventListener('click',()=>{
+  if(step.classList.contains('done')||step.classList.contains('checking'))return;
+  step.classList.add('checking');
+  setTimeout(()=>{step.classList.remove('checking');step.classList.add('done');vsDone.add(step);
+    if(vsDone.size===2)$('#vGo').disabled=false;},750);
+}));
+function completeVerify(){
+  closeModal();S.verified=true;
+  setCert(90);countTo($('#certNum'),D.cert,90,900);
+  renderVerdict();toast(t('t_updated'));
+}
+
+/* ---------- donate gate ---------- */
+function bindGate(){
+  $$('.ckrow').forEach(r=>r.addEventListener('click',()=>{r.classList.toggle('done');renderGate();}));
+}
+function renderGate(){
+  const n=$$('.ckrow.done').length,btn=$('#donateBtn'),ready=n===3;
+  $('#dgMeta').textContent=`${n} / 3`;
+  btn.classList.toggle('bg-brand-900',ready);btn.classList.toggle('bg-stone-300',!ready);
+  btn.textContent=ready?t('donate_cta'):t('donate_cta')+tp('gateSuf',n);
+}
+function donateGateClick(){
+  const n=$$('.ckrow.done').length;
+  if(n<3){const btn=$('#donateBtn');btn.classList.remove('shake');void btn.offsetWidth;btn.classList.add('shake');
+    toast(n===2?t('t_one'):tp('left',3-n));return;}
+  toast(t('t_home'));
+}
+
+/* ---------- items segments ---------- */
+function setItemsSeg(s){
+  $$('.iseg').forEach(b=>{
+    const on=b.dataset.s===s;
+    b.classList.toggle('bg-white',on);b.classList.toggle('shadow-sm',on);b.classList.toggle('text-brand-900',on);b.classList.toggle('text-stone-600',!on);
+  });
+  $$('.ipane').forEach(p=>p.classList.toggle('hidden',p.id!=='items-'+s));
+}
+window.setItemsSeg=setItemsSeg;
+
+/* ---------- modals ---------- */
+function openModal(id){$('#mlayer').classList.add('on');document.getElementById(id).classList.add('up');icons();}
+function closeModal(){$('#mlayer').classList.remove('on');$$('.modal').forEach(m=>m.classList.remove('up'));}
+window.openModal=openModal;window.closeModal=closeModal;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+/* ---------- listing ---------- */
+const LISTING=`Sony WH-1000XM4 · Nagpur
+Battery degraded — stated honestly. Everything else works. Pads worn, case and cable included.
+Asking ₹6,800 · accept ₹6,200.
+No QR scans. If you're "in the army and can't call," don't write.`;
+function copyListing(){
+  const done=()=>toast(t('t_copied'));
+  if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(LISTING).then(done).catch(done);
+  else{const ta=document.createElement('textarea');ta.value=LISTING;document.body.appendChild(ta);ta.select();try{document.execCommand('copy')}catch(e){}ta.remove();done();}
+}
+window.copyListing=copyListing;
+
+/* ---------- reuse guides ---------- */
+const GUIDES={
+ tshirt:{t:'Old tee → produce bag',s:['Cut the sleeves off at the seams.','Cut the neckline out — that becomes the opening.','Slice fringe strips along the bottom, 6 cm long.','Tie front-to-back knots all the way across. Done — holds 8 kg.']},
+ crate:{t:'Wood crate → planter',s:['Sand the crate lightly; brush off dust.','Line inside with a punctured compostable sack.','Fill with potting mix; plant basil and mint.','Elevate on bricks so water drains clear.']},
+ tin:{t:'Coffee tin → desk caddy',s:['Wash and fully dry the tin.','Glue a cork pad to the base.','One matte spray coat, 20 minutes to dry.','Load pens, rulers, tools.']}
+};
+function openReuseModal(k){
+  const g=GUIDES[k];if(!g)return;
+  $('#ruTitle').textContent=g.t;
+  $('#ruBody').innerHTML=g.s.map((s,i)=>`<div class="flex gap-3"><b class="text-stone-400">${i+1}</b><span>${s}</span></div>`).join('');
+  openModal('m-reuse');
+}
+window.openReuseModal=openReuseModal;
+
+/* ---------- dashboard ---------- */
+function calibrated(){toast(t('t_cal'));}
+window.calibrated=calibrated;
+
+/* ---------- init ---------- */
+loadProfile('headphones');
+applyLang('en');
+navigateTo('home');
+icons();
+</script>
+<script src="rekart-api.js"></script>
+</body>
+</html>

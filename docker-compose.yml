@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  rekart-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rekart-api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - USE_POSTGRES=true
+      - DATABASE_URL=postgresql://rekart_admin:rekart_secure_pass@rekart-db:5432/rekart_db
+      - STORAGE_MODE=local
+      - DEFAULT_CITY=nagpur
+    depends_on:
+      rekart-db:
+        condition: service_healthy
+      rekart-redis:
+        condition: service_started
+    volumes:
+      - uploads_data:/app/uploads
+
+  rekart-db:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: rekart-postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rekart_admin
+      POSTGRES_PASSWORD: rekart_secure_pass
+      POSTGRES_DB: rekart_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rekart_admin -d rekart_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rekart-redis:
+    image: redis:7.2-alpine
+    container_name: rekart-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads_data:
