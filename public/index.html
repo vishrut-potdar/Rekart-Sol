@@ -586,11 +586,10 @@
           <button id="donateBtn" onclick="donateGateClick()" class="mt-4 w-full px-5 py-3 rounded-full text-white font-bold text-sm transition-all"></button>
         </div>
         <div class="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-subtle">
-          <div class="flex items-center justify-between mb-2"><div class="font-bold text-brand-950" data-i18n="ngo_t"></div><span class="text-[11px] font-mono text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md">VERIFIED</span></div>
-          <div class="divide-y divide-stone-100 text-sm">
-            <div class="py-3.5"><b class="block">Anand Vidyalaya</b><span id="ng1s" class="text-xs text-stone-500"></span></div>
-            <div class="py-3.5"><b class="block">Snehalaya children's home</b><span id="ng2s" class="text-xs text-stone-500"></span></div>
-          </div>
+          <div class="flex items-center justify-between gap-3 mb-1"><div class="font-bold text-brand-950" data-i18n="ngo_t"></div>
+            <button id="ngoLocBtn" onclick="useMyLocation()" class="flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-900 transition-colors shrink-0"><i data-lucide="locate-fixed" class="w-3 h-3"></i><span data-i18n="ngo_loc"></span></button></div>
+          <div id="ngoFrom" class="text-[11px] text-stone-400 mb-1"></div>
+          <div id="ngoList" class="divide-y divide-stone-100 text-sm" aria-live="polite"></div>
         </div>
         <button onclick="setRoute('reuse')" class="block mx-auto text-sm text-stone-500 hover:text-stone-800" data-i18n="keep_cta"></button>
       </div>
@@ -1315,7 +1314,6 @@ function renderProfile(){
   const done=Math.min($$('.ckrow.done').length,3);
   $('#gateWrap').innerHTML=[1,2,3].map(i=>`<div class="ckrow${i<=done?' done':''}"><span class="ck"><span class="ck-in"></span></span><div><b class="block text-sm">${pt('g'+i+'n')}</b><span class="text-xs text-stone-500">${pt('g'+i+'s')}</span></div></div>`).join('');
   bindGate();
-  $('#ng1s').textContent=pt('ng1s');$('#ng2s').textContent=pt('ng2s');
   // reuse ideas
   $('#ideaWrap').innerHTML=`
     <div class="border-b border-stone-100 pb-4"><b class="block text-sm">${pt('i1t')}</b><span class="text-xs text-stone-400">${pt('i1m')}</span>

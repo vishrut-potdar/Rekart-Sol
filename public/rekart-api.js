@@ -14,10 +14,10 @@
     const fps = await post('/calc/fair-price-shield', { modelName: p.name, faultType: p.fault, quotedAmount: d.quote });
     p.prov = fps.provenance;
     if (p.prov?.resale_working_inr) d.working = p.prov.resale_working_inr;
-    const [ror, cc, near] = await Promise.all([
+    const [ror, cc] = await Promise.all([
       post('/calc/repair-or-release', { category: p.cat, modelName: p.name, functionalResaleValue: d.working, estimatedRepairCost: d.quote, asIsScrapValue: d.scrap }),
       post('/calc/channel-comparison', { category: p.cat, modelName: p.name, functionalMarketValue: d.working, estimatedRepairCost: d.quote }),
-      get(`/routing/nearby-partners?targetTrack=repair&category=${p.cat}`)
+      loadNearby(p)
     ]);
     const b = fps.local_benchmark;
     // Bands mirror the backend's verdict thresholds: fair <= P75, high <= P75 + 1.5*IQR, very high beyond.
@@ -27,9 +27,91 @@
     // Channels the design marks unavailable (null) stay unavailable; brand exchange isn't modelled by the backend.
     const live = [ch.peer_to_peer, ch.instant_buyback, ch.offline_refurbisher, p.sell[3], ch.kabadiwala_scrap];
     p.sell = p.sell.map((v, i) => (v == null ? null : live[i]));
-    p.shops = near.partners.slice(0, 2);
     p.synced = true;
   }
+
+  /* ---------- nearby repair shops + NGOs ---------- */
+  let loc = null; // set once the user shares their location; null = distances from Nagpur city centre
+  const locQS = () => (loc ? `&latitude=${loc.latitude}&longitude=${loc.longitude}` : '');
+
+  async function loadNearby(p) {
+    const [shops, ngos] = await Promise.all([
+      get(`/routing/nearby-partners?targetTrack=repair&category=${p.cat}${locQS()}`),
+      get(`/routing/nearby-partners?targetTrack=ngo_donation&category=${p.cat}${locQS()}`)
+    ]);
+    p.shops = shops.partners.slice(0, 2);
+    p.ngos = ngos.partners;
+    p.nearLoc = loc;
+  }
+
+  Object.assign(I18N.en, {
+    ngo_loc: 'Use my location', ngo_locating: 'Locating…', ngo_from_city: 'Distances from Nagpur city centre', ngo_from_you: 'Distances from your location',
+    ngo_loc_err: 'Couldn’t get your location — showing distances from the city centre.', ngo_none: 'No partner NGO nearby accepts this kind of item yet. Try the Sell or Recycle route.',
+    ngo_needs: 'Needs now', ngo_pickup: 'Free pickup', ngo_drop: 'Drop-off only', ngo_open: 'Open', ngo_acc: 'Accepts', ngo_grade: 'condition {g} or better', ngo_dir: 'Directions', ngo_ver: 'Verified'
+  });
+  Object.assign(I18N.hi, {
+    ngo_loc: 'मेरी लोकेशन', ngo_locating: 'ढूँढ रहे हैं…', ngo_from_city: 'नागपुर शहर के केंद्र से दूरी', ngo_from_you: 'आपकी लोकेशन से दूरी',
+    ngo_loc_err: 'आपकी लोकेशन नहीं मिली — शहर के केंद्र से दूरी दिखा रहे हैं।', ngo_none: 'पास की कोई पार्टनर संस्था अभी यह चीज़ नहीं लेती। बेचने या रीसायकल का रास्ता देखें।',
+    ngo_needs: 'अभी ज़रूरत', ngo_pickup: 'मुफ़्त पिकअप', ngo_drop: 'सिर्फ़ ड्रॉप-ऑफ़', ngo_open: 'खुला', ngo_acc: 'लेते हैं', ngo_grade: 'हालत {g} या बेहतर', ngo_dir: 'रास्ता', ngo_ver: 'सत्यापित'
+  });
+  Object.assign(I18N.hg, {
+    ngo_loc: 'Meri location', ngo_locating: 'Dhoondh rahe hain…', ngo_from_city: 'Nagpur city centre se doori', ngo_from_you: 'Aapki location se doori',
+    ngo_loc_err: 'Location nahin mili — city centre se doori dikha rahe hain.', ngo_none: 'Paas ki koi partner NGO abhi yeh cheez nahin leti. Sell ya Recycle ka raasta dekho.',
+    ngo_needs: 'Abhi zaroorat', ngo_pickup: 'Free pickup', ngo_drop: 'Sirf drop-off', ngo_open: 'Khula', ngo_acc: 'Lete hain', ngo_grade: 'condition {g} ya behtar', ngo_dir: 'Raasta', ngo_ver: 'Verified'
+  });
+
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function ngoRow(n) {
+    const row = el('div', 'py-3.5');
+    const top = el('div', 'flex items-baseline justify-between gap-3');
+    top.append(el('b', 'block', n.name), el('span', 'text-xs font-semibold text-stone-600 shrink-0', `${n.distance_km} km`));
+    const area = n.address.split(',').slice(-3, -2)[0]?.trim() || n.city;
+    const hours = n.operational_hours ? `${t('ngo_open')} ${n.operational_hours.open}–${n.operational_hours.close}` : null;
+    const meta = el('div', 'text-xs text-stone-500 mt-0.5', [area, hours, t(n.pickup_available ? 'ngo_pickup' : 'ngo_drop'), n.is_verified && `✓ ${t('ngo_ver')}`].filter(Boolean).join(' · '));
+    row.append(top, meta);
+    if (n.has_active_shortage && n.shortage_description) {
+      const urgent = n.shortage_urgency === 'high';
+      row.append(el('div', `mt-2 text-xs rounded-lg px-2.5 py-1.5 ${urgent ? 'bg-amber-50 text-amber-900 border border-amber-200' : 'bg-brand-50 text-brand-900'}`, `${t('ngo_needs')}: ${n.shortage_description}`));
+    }
+    const acc = [n.accepted_categories?.length && `${t('ngo_acc')}: ${n.accepted_categories.join(', ')}`, n.min_acceptance_grade && t('ngo_grade').replace('{g}', n.min_acceptance_grade)].filter(Boolean).join(' · ');
+    const foot = el('div', 'flex items-center justify-between gap-3 mt-2');
+    foot.append(el('span', 'text-[11px] text-stone-400', acc));
+    const dir = el('a', 'text-xs font-bold text-brand-800 hover:text-brand-950 shrink-0', `${t('ngo_dir')} ↗`);
+    dir.href = `https://www.google.com/maps/dir/?api=1&destination=${n.latitude},${n.longitude}`;
+    dir.target = '_blank'; dir.rel = 'noopener';
+    foot.append(dir);
+    row.append(foot);
+    return row;
+  }
+
+  function applyNgos() {
+    document.getElementById('ngoFrom').textContent = t(loc ? 'ngo_from_you' : 'ngo_from_city');
+    const list = document.getElementById('ngoList');
+    if (!P.ngos) return list.replaceChildren(); // still loading
+    list.replaceChildren(...(P.ngos.length ? P.ngos.map(ngoRow) : [el('p', 'py-3.5 text-xs text-stone-500', t('ngo_none'))]));
+  }
+
+  window.useMyLocation = () => {
+    const label = document.querySelector('#ngoLocBtn span');
+    const fail = () => { label.textContent = t('ngo_loc'); toast(t('ngo_loc_err')); };
+    if (!navigator.geolocation) return fail();
+    label.textContent = t('ngo_locating');
+    navigator.geolocation.getCurrentPosition(pos => {
+      // ~100 m precision is plenty for "nearest" and avoids sending an exact home position.
+      loc = { latitude: +pos.coords.latitude.toFixed(3), longitude: +pos.coords.longitude.toFixed(3) };
+      const p = P;
+      loadNearby(p).then(() => { label.textContent = t('ngo_loc'); if (P === p) renderProfile(); }).catch(fail);
+    }, fail, { timeout: 10000, maximumAge: 600000 });
+  };
+
+  // Once the donation checklist is complete, point to the nearest matching NGO instead of the design's sample school.
+  const baseDonate = window.donateGateClick;
+  window.donateGateClick = () => {
+    if (!P.ngos || $$('.ckrow.done').length < 3) return baseDonate();
+    const n = P.ngos[0];
+    toast(n ? `${n.name} · ${t(n.pickup_available ? 'ngo_pickup' : 'ngo_drop')} · ${n.distance_km} km` : t('ngo_none'));
+  };
 
   function applyShops() {
     (P.shops || []).forEach((s, i) => {
@@ -52,14 +134,14 @@
   }
 
   const baseRender = window.renderProfile;
-  window.renderProfile = function () { baseRender(); if (P) { applyShops(); applyProvenance(); } };
+  window.renderProfile = function () { baseRender(); if (P) { applyShops(); applyProvenance(); applyNgos(); } };
 
   const baseLoad = window.loadProfile;
   window.loadProfile = function (id, opts) {
     baseLoad(id, opts);
     const p = P;
-    if (p.synced) return;
-    sync(p).then(() => {
+    if (p.synced && p.nearLoc === loc) return;
+    (p.synced ? loadNearby(p) : sync(p)).then(() => { // nearby lists refresh if the location changed since
       if (P !== p) return; // user moved on to another item
       D = { ...p.d };
       renderProfile();
@@ -216,7 +298,8 @@
         sell_as_is_inr: D.asis, repair_ceiling_60pct_inr: D.rule,
         payouts_inr: { p2p: P.sell[0], instant_buyback: P.sell[1], offline_store: P.sell[2], kabadiwala: P.sell[4] },
         price_source: P.prov?.source, price_is_estimate: P.prov?.is_estimate,
-        nearby_shops: (P.shops || []).map(s => `${s.name} (${s.distance_km} km)`)
+        nearby_shops: (P.shops || []).map(s => `${s.name} (${s.distance_km} km)`),
+        nearby_ngos: (P.ngos || []).map(n => ({ name: n.name, distance_km: n.distance_km, accepts: n.accepted_categories, pickup: n.pickup_available, needs_now: n.shortage_description }))
       },
       last_disposal_lookup: lastLookup
     };
