@@ -40,47 +40,67 @@
       get(`/routing/nearby-partners?targetTrack=ngo_donation&category=${p.cat}${locQS()}`)
     ]);
     p.shops = shops.partners.slice(0, 2);
-    p.ngos = ngos.partners;
+    // Nearest first (the backend ranks NGOs with an active need first; the "Needs now" badge still shows that).
+    p.ngos = [...ngos.partners].sort((a, b) => a.distance_meters - b.distance_meters);
     p.nearLoc = loc;
   }
 
   Object.assign(I18N.en, {
     ngo_loc: 'Use my location', ngo_locating: 'Locating…', ngo_from_city: 'Distances from Nagpur city centre', ngo_from_you: 'Distances from your location',
-    ngo_loc_err: 'Couldn’t get your location — showing distances from the city centre.', ngo_none: 'No partner NGO nearby accepts this kind of item yet. Try the Sell or Recycle route.',
-    ngo_needs: 'Needs now', ngo_pickup: 'Free pickup', ngo_drop: 'Drop-off only', ngo_open: 'Open', ngo_acc: 'Accepts', ngo_grade: 'condition {g} or better', ngo_dir: 'Directions', ngo_ver: 'Verified'
+    ngo_loc_err: 'Couldn’t get your location — showing distances from the city centre.', ngo_none: 'We haven’t found a Nagpur NGO that takes this kind of item yet. Try the Sell or Recycle route, or ask the assistant.',
+    ngo_needs: 'Needs now', ngo_pickup: 'Free pickup', ngo_drop: 'Drop-off only', ngo_open: 'Open', ngo_acc: 'Accepts', ngo_grade: 'condition {g} or better', ngo_dir: 'Directions', ngo_ver: 'Verified', ngo_call: 'Call', ngo_src: 'Source', ngo_asof: 'as of'
   });
   Object.assign(I18N.hi, {
     ngo_loc: 'मेरी लोकेशन', ngo_locating: 'ढूँढ रहे हैं…', ngo_from_city: 'नागपुर शहर के केंद्र से दूरी', ngo_from_you: 'आपकी लोकेशन से दूरी',
-    ngo_loc_err: 'आपकी लोकेशन नहीं मिली — शहर के केंद्र से दूरी दिखा रहे हैं।', ngo_none: 'पास की कोई पार्टनर संस्था अभी यह चीज़ नहीं लेती। बेचने या रीसायकल का रास्ता देखें।',
-    ngo_needs: 'अभी ज़रूरत', ngo_pickup: 'मुफ़्त पिकअप', ngo_drop: 'सिर्फ़ ड्रॉप-ऑफ़', ngo_open: 'खुला', ngo_acc: 'लेते हैं', ngo_grade: 'हालत {g} या बेहतर', ngo_dir: 'रास्ता', ngo_ver: 'सत्यापित'
+    ngo_loc_err: 'आपकी लोकेशन नहीं मिली — शहर के केंद्र से दूरी दिखा रहे हैं।', ngo_none: 'नागपुर में यह चीज़ लेने वाली कोई संस्था अभी नहीं मिली। बेचने या रीसायकल का रास्ता देखें, या सहायक से पूछें।',
+    ngo_needs: 'अभी ज़रूरत', ngo_pickup: 'मुफ़्त पिकअप', ngo_drop: 'सिर्फ़ ड्रॉप-ऑफ़', ngo_open: 'खुला', ngo_acc: 'लेते हैं', ngo_grade: 'हालत {g} या बेहतर', ngo_dir: 'रास्ता', ngo_ver: 'सत्यापित', ngo_call: 'कॉल', ngo_src: 'स्रोत', ngo_asof: 'तारीख़'
   });
   Object.assign(I18N.hg, {
     ngo_loc: 'Meri location', ngo_locating: 'Dhoondh rahe hain…', ngo_from_city: 'Nagpur city centre se doori', ngo_from_you: 'Aapki location se doori',
-    ngo_loc_err: 'Location nahin mili — city centre se doori dikha rahe hain.', ngo_none: 'Paas ki koi partner NGO abhi yeh cheez nahin leti. Sell ya Recycle ka raasta dekho.',
-    ngo_needs: 'Abhi zaroorat', ngo_pickup: 'Free pickup', ngo_drop: 'Sirf drop-off', ngo_open: 'Khula', ngo_acc: 'Lete hain', ngo_grade: 'condition {g} ya behtar', ngo_dir: 'Raasta', ngo_ver: 'Verified'
+    ngo_loc_err: 'Location nahin mili — city centre se doori dikha rahe hain.', ngo_none: 'Nagpur mein yeh cheez lene wali koi NGO abhi nahin mili. Sell ya Recycle ka raasta dekho, ya assistant se poocho.',
+    ngo_needs: 'Abhi zaroorat', ngo_pickup: 'Free pickup', ngo_drop: 'Sirf drop-off', ngo_open: 'Khula', ngo_acc: 'Lete hain', ngo_grade: 'condition {g} ya behtar', ngo_dir: 'Raasta', ngo_ver: 'Verified', ngo_call: 'Call', ngo_src: 'Source', ngo_asof: 'as of'
   });
 
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
+  // The locality is the address part just before "Nagpur" (e.g. "…, Sitabuldi, Nagpur").
+  function areaOf(address, city) {
+    const parts = address.split(',').map(s => s.trim());
+    const i = parts.findIndex(s => /^nagpur\b/i.test(s));
+    return (i > 0 ? parts[i - 1] : parts[parts.length - 1]) || city;
+  }
+
+  function link(text, href, external) {
+    const a = el('a', 'text-xs font-bold text-brand-800 hover:text-brand-950 whitespace-nowrap', text);
+    a.href = href;
+    if (external) { a.target = '_blank'; a.rel = 'noopener'; }
+    return a;
+  }
+
   function ngoRow(n) {
     const row = el('div', 'py-3.5');
     const top = el('div', 'flex items-baseline justify-between gap-3');
-    top.append(el('b', 'block', n.name), el('span', 'text-xs font-semibold text-stone-600 shrink-0', `${n.distance_km} km`));
-    const area = n.address.split(',').slice(-3, -2)[0]?.trim() || n.city;
-    const hours = n.operational_hours ? `${t('ngo_open')} ${n.operational_hours.open}–${n.operational_hours.close}` : null;
-    const meta = el('div', 'text-xs text-stone-500 mt-0.5', [area, hours, t(n.pickup_available ? 'ngo_pickup' : 'ngo_drop'), n.is_verified && `✓ ${t('ngo_ver')}`].filter(Boolean).join(' · '));
+    // ≈ when the building isn't mapped and the distance is to the nearest landmark
+    top.append(el('b', 'block', n.name), el('span', 'text-xs font-semibold text-stone-600 shrink-0', `${n.coords_approx ? '≈ ' : ''}${n.distance_km} km`));
+    const h = n.operational_hours;
+    const hours = h && [h.days, `${h.open}–${h.close}`].filter(Boolean).join(' ');
+    const meta = el('div', 'text-xs text-stone-500 mt-0.5', [areaOf(n.address, n.city), hours, t(n.pickup_available ? 'ngo_pickup' : 'ngo_drop'), n.is_verified && `✓ ${t('ngo_ver')}`].filter(Boolean).join(' · '));
     row.append(top, meta);
     if (n.has_active_shortage && n.shortage_description) {
       const urgent = n.shortage_urgency === 'high';
       row.append(el('div', `mt-2 text-xs rounded-lg px-2.5 py-1.5 ${urgent ? 'bg-amber-50 text-amber-900 border border-amber-200' : 'bg-brand-50 text-brand-900'}`, `${t('ngo_needs')}: ${n.shortage_description}`));
     }
-    const acc = [n.accepted_categories?.length && `${t('ngo_acc')}: ${n.accepted_categories.join(', ')}`, n.min_acceptance_grade && t('ngo_grade').replace('{g}', n.min_acceptance_grade)].filter(Boolean).join(' · ');
-    const foot = el('div', 'flex items-center justify-between gap-3 mt-2');
-    foot.append(el('span', 'text-[11px] text-stone-400', acc));
-    const dir = el('a', 'text-xs font-bold text-brand-800 hover:text-brand-950 shrink-0', `${t('ngo_dir')} ↗`);
-    dir.href = `https://www.google.com/maps/dir/?api=1&destination=${n.latitude},${n.longitude}`;
-    dir.target = '_blank'; dir.rel = 'noopener';
-    foot.append(dir);
+    if (n.notes) row.append(el('div', 'text-xs text-stone-600 mt-2 leading-relaxed', n.notes));
+    if (n.accepted_categories?.length) row.append(el('div', 'text-[11px] text-stone-400 mt-1.5', `${t('ngo_acc')}: ${n.accepted_categories.join(', ')}`));
+    const foot = el('div', 'flex flex-wrap items-center gap-x-4 gap-y-1 mt-2');
+    // Directions search the street address: more precise than our approximate pin.
+    foot.append(link(`${t('ngo_dir')} ↗`, `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(n.address)}`, true));
+    if (n.phone) foot.append(link(`${t('ngo_call')} ${n.phone}`, `tel:${n.phone.replace(/[^\d+]/g, '')}`));
+    if (n.source) {
+      const src = link(`${t('ngo_src')}: ${n.source.label} ↗`, n.source.url, true);
+      src.className = 'text-[11px] text-stone-400 hover:text-stone-700 underline decoration-dotted';
+      foot.append(src, el('span', 'text-[11px] text-stone-400', `${t('ngo_asof')} ${n.source.as_of}`));
+    }
     row.append(foot);
     return row;
   }

@@ -181,9 +181,14 @@ class MemoryStore {
       pickup_available: partner.pickup_available ?? false,
       accepted_categories: partner.accepted_categories || [],
       min_acceptance_grade: partner.min_acceptance_grade || 'C',
-      operational_hours: partner.operational_hours || { open: '09:00', close: '20:00' },
+      // null = hours not published; only default when the field is absent
+      operational_hours: partner.operational_hours !== undefined ? partner.operational_hours : { open: '09:00', close: '20:00' },
       latitude: partner.latitude,
       longitude: partner.longitude,
+      coords_approx: Boolean(partner.coords_approx),
+      phone: partner.phone || null,
+      notes: partner.notes || null,
+      source: partner.source || null,
       commission_rate: partner.commission_rate || 0.05,
       created_at: new Date().toISOString()
     };

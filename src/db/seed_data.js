@@ -112,34 +112,61 @@ export async function seedNagpurData() {
       operational_hours: { open: '10:00', close: '20:30' },
       commission_rate: 0.10
     },
+    // Real Nagpur donation points, each with its public source. is_verified=false: not vetted by Rekart itself.
+    // coords_approx: the exact building isn't on OpenStreetMap, so the nearest landmark is used for distance.
     {
       id: 'p-ngo-001',
-      name: 'Goonj Collection & Care Hub Nagpur',
+      name: 'Goonj — Nagpur dropping centre',
       partner_type: 'ngo',
-      address: 'Civil Lines, Near High Court Square, Nagpur, Maharashtra 440001',
+      address: 'Soham Home for Senior Living, 175 North Ambazari Road, beside Seva Sadan Saksham High School, Sitabuldi, Nagpur',
       city: 'Nagpur',
-      latitude: 21.1558,
-      longitude: 79.0754,
-      is_verified: true,
-      pickup_available: true,
+      latitude: 21.1412, // Jhansi Rani Square, North Ambazari Road
+      longitude: 79.0802,
+      coords_approx: true,
+      is_verified: false,
+      pickup_available: false,
       accepted_categories: ['apparel', 'books', 'furniture', 'kitchenware'],
       min_acceptance_grade: 'B',
-      operational_hours: { open: '10:00', close: '17:30' },
+      operational_hours: { days: 'Mon–Sat', open: '10:00', close: '17:00' },
+      notes: 'Wash clothes and tie shoes in pairs; no corporate bulk donations. Call before visiting.',
+      source: { label: 'goonj.org — dropping centres', url: 'https://goonj.org/dropping-centres/', as_of: '2026-11-03' },
       commission_rate: 0.00
     },
     {
       id: 'p-ngo-002',
-      name: 'Rotary Seva Kendra - Wardha Road',
+      name: 'Rotary Club Nagpur clothes drive (Cardin showroom)',
       partner_type: 'ngo',
-      address: 'Near Chhatrapati Square, Wardha Road, Nagpur, Maharashtra 440015',
+      address: 'Cardin Showroom, WHC Road, near Batukbhai Jewellers, Dharampeth, Nagpur',
       city: 'Nagpur',
-      latitude: 21.1118,
-      longitude: 79.0652,
-      is_verified: true,
+      latitude: 21.1373, // Batukbhai, West High Court Road (OpenStreetMap)
+      longitude: 79.0601,
+      is_verified: false,
       pickup_available: false,
-      accepted_categories: ['apparel', 'books', 'electronics'],
-      min_acceptance_grade: 'A',
-      operational_hours: { open: '09:00', close: '17:00' },
+      accepted_categories: ['apparel'],
+      min_acceptance_grade: 'B',
+      operational_hours: null,
+      phone: '0712-2525817',
+      notes: 'Clean, washed men’s clothing only — given to tribal families in nearby villages.',
+      source: { label: 'The Hitavada', url: 'https://www.thehitavada.com/Encyc/2026/4/2/rotary-club-nagpur-and-cardin-showroom-dharampeth-launch-clothes-donation-drive.html', as_of: '2026-04-02' },
+      commission_rate: 0.00
+    },
+    {
+      id: 'p-ngo-003',
+      name: 'Eklavya India Foundation',
+      partner_type: 'ngo',
+      address: 'Eklavya Residential Campus, Pithesur, Gorewada Road, Nagpur 441501',
+      city: 'Nagpur',
+      latitude: 21.1917, // Gorewada, Gorewada Road
+      longitude: 79.0102,
+      coords_approx: true,
+      is_verified: false,
+      pickup_available: false,
+      accepted_categories: ['electronics'],
+      min_acceptance_grade: 'B',
+      operational_hours: null,
+      phone: '+91 73851 54560',
+      notes: 'Has asked for spare or refurbished laptops for first-generation students. Call first — other devices may not be needed.',
+      source: { label: 'eklavyaindia.org', url: 'https://eklavyaindia.org/', as_of: '2026-11-03' },
       commission_rate: 0.00
     },
     {
@@ -181,22 +208,13 @@ export async function seedNagpurData() {
   // 2. Seed Real-time NGO Demands
   const demands = [
     {
-      partner_id: 'p-ngo-001',
-      category: 'apparel',
-      item_description: 'Winter woolens, jackets, and clean blankets for rural shelters',
-      quantity_demanded: 120,
-      quantity_fulfilled: 35,
-      urgency_level: 'high',
-      active_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
       partner_id: 'p-ngo-002',
-      category: 'books',
-      item_description: 'Class 8-10 State Board & CBSE textbooks for community library',
-      quantity_demanded: 80,
-      quantity_fulfilled: 12,
+      category: 'apparel',
+      item_description: 'Men’s shirts, trousers, jeans, kurtas, T-shirts (reported 2 Apr 2026)',
+      quantity_demanded: 100,
+      quantity_fulfilled: 0,
       urgency_level: 'medium',
-      active_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
+      active_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     }
   ];
 
