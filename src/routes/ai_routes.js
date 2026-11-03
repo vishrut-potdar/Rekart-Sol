@@ -32,7 +32,10 @@ router.post('/ask', async (req, res, next) => {
     });
     if (!response.ok) {
       console.warn('[ai/ask] OpenRouter error', response.status, await response.text());
-      return res.status(502).json({ success: false, error: `AI provider error (${response.status}). Try again shortly.` });
+      const hint = [401, 402, 403].includes(response.status)
+        ? 'the API key was rejected or its spending limit is reached (check it at openrouter.ai/settings/keys)'
+        : 'try again shortly';
+      return res.status(502).json({ success: false, error: `AI provider error (${response.status}): ${hint}.` });
     }
     const reply = (await response.json()).choices?.[0]?.message?.content?.trim() || '';
     return res.status(200).json({ success: true, data: { reply, model: ENV.OPENROUTER_MODEL } });

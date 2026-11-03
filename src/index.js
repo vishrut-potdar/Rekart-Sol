@@ -1,8 +1,11 @@
 import { createApp } from './app.js';
 import { ENV } from './config/env.js';
 
-async function bootstrap() {
-  const app = await createApp();
+// Vercel imports this module and serves the default-exported Express app; it must not call listen().
+const app = await createApp();
+export default app;
+
+if (!process.env.VERCEL) {
   app.listen(ENV.PORT, () => {
     console.log(`=======================================================`);
     console.log(`  REKART BACKEND SERVICE STARTED                      `);
@@ -13,8 +16,3 @@ async function bootstrap() {
     console.log(`=======================================================`);
   });
 }
-
-bootstrap().catch(err => {
-  console.error('Fatal startup error:', err);
-  process.exit(1);
-});

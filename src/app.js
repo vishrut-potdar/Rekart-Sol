@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ENV } from './config/env.js';
 import { requestLogger } from './middleware/request_logger.js';
 import { errorHandler } from './middleware/error_handler.js';
 import authRoutes from './routes/auth_routes.js';
@@ -32,11 +33,11 @@ export async function createApp() {
   app.use(express.urlencoded({ extended: true }));
   app.use(requestLogger);
 
-  // Serve Static Frontend UI: design/ is the main app at "/", public/ keeps the legacy portal + partner terminal
-  app.use(express.static(path.resolve(__dirname, '../design'), { index: 'rekart-final.html' }));
+  // Static frontend: public/index.html is the main app, legacy.html the old portal, partner.html the terminal.
+  // Locally Express serves it; on Vercel the CDN serves public/** directly.
   const publicDir = path.resolve(__dirname, '../public');
   app.use(express.static(publicDir));
-  app.use('/uploads', express.static(path.resolve('./uploads')));
+  app.use('/uploads', express.static(path.resolve(ENV.LOCAL_UPLOAD_DIR)));
 
   // Health check & status
   app.get('/health', (req, res) => {

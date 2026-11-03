@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekart - Circular Economy & Diagnostic Triage</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .tab-bar { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.75rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); }
+    .tab-btn { background: #1e293b; color: var(--text-muted); border: 1px solid var(--card-border); padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .tab-btn.active { background: var(--primary); color: #022c22; border-color: var(--primary); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+    .item-card { background: #0f172a; border: 1px solid var(--card-border); border-radius: 0.75rem; padding: 1.25rem; }
+    .item-card h4 { color: #fff; margin-bottom: 0.25rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        ♻️ Rekart <span class="badge">Nagpur Circular OS</span>
+      </div>
+      <nav class="nav-links">
+        <a href="/legacy.html" class="active">Donor & User App</a>
+        <a href="/partner.html">Partner Terminal</a>
+        <a href="/health" target="_blank">Health & API</a>
+      </nav>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('tab-triage')">🩺 1. Triage & Valuation</button>
+      <button class="tab-btn" onclick="switchTab('tab-repair')">🔧 2. Repair & Student Techs</button>
+      <button class="tab-btn" onclick="switchTab('tab-selling')">🏷️ 3. Selling & Scam Shield</button>
+      <button class="tab-btn" onclick="switchTab('tab-reuse')">🌱 4. Reuse, Memory Vault & Rewards</button>
+      <button class="tab-btn" onclick="switchTab('tab-disposal')">🔍 5. "Where Does This Go?"</button>
+    </div>
+
+    <!-- TAB 1: Triage & Valuation -->
+    <div id="tab-triage" class="tab-pane active">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">📸 1. Vision & Media Ingestion</h2></div>
+            <div class="form-group">
+              <label>Mode of Ingestion</label>
+              <select id="visionMode" onchange="toggleVisionMode()">
+                <option value="pile">Pile Mode (Bulk Apparel / Garments)</option>
+                <option value="single">Single Item (Electronics / Appliances)</option>
+              </select>
+            </div>
+            <div id="pileSection">
+              <div class="form-group">
+                <label>Bulk Photograph Image URL</label>
+                <input type="text" id="pileImageUrl" value="https://cdn.rekart.in/mock/garments_nagpur.jpg">
+              </div>
+              <button class="btn btn-primary" onclick="runPileDecomposition()">Decompose Pile into Garment Cards</button>
+            </div>
+            <div id="singleSection" style="display:none;">
+              <div class="form-group">
+                <label>Single Item Photo URL</label>
+                <input type="text" id="singleImageUrl" value="https://cdn.rekart.in/mock/iphone13.jpg">
+              </div>
+              <div class="form-group">
+                <label>User Problem Description</label>
+                <input type="text" id="userHint" value="iPhone 13 with cracked front glass">
+              </div>
+              <button class="btn btn-primary" onclick="runSingleClassification()">Analyze & Classify Item</button>
+            </div>
+            <div id="visionResult" class="result-box" style="display:none;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">🩺 2. Diagnostic Triage (3-5 Tap Questions)</h2></div>
+            <div class="form-group">
+              <label>Language Selection</label>
+              <select id="triageLanguage" onchange="loadQuestions()">
+                <option value="en">English</option>
+                <option value="hi">हिंदी (Hindi)</option>
+                <option value="hinglish" selected>Hinglish (Chat Style)</option>
+              </select>
+            </div>
+            <div id="questionsContainer"></div>
+            <button class="btn btn-outline" style="margin-top: 1rem;" onclick="submitTriageAnswers()">Submit Diagnostic Answers</button>
+            <div id="triageResult" class="result-box" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">🛡️ 3. Fair Price Shield & Quote Check</h2></div>
+            <div class="form-group"><label>Model Name</label><input type="text" id="shieldModel" value="iPhone 13"></div>
+            <div class="form-group"><label>Fault / Repair Operation</label><input type="text" id="shieldFault" value="Screen Replacement"></div>
+            <div class="form-group"><label>Local Shop Quote (₹ INR)</label><input type="number" id="shieldQuote" value="4300"></div>
+            <button class="btn btn-secondary" onclick="evaluateQuote()">Check Quote vs Nagpur Benchmark</button>
+            <div id="shieldResult" class="result-box" style="display:none;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">⚖️ 4. Repair-or-Release (60% Rule) & Net Yields</h2></div>
+            <div class="form-group"><label>Estimated Resale Value (Functional)</label><input type="number" id="marketResale" value="36000"></div>
+            <div class="form-group"><label>Estimated Repair Cost</label><input type="number" id="repairCost" value="4500"></div>
+            <button class="btn btn-primary" onclick="calculateMatrixAndChannels()">Compute Best Financial Outcome</button>
+            <div id="matrixResult" class="result-box" style="display:none;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">⚡ 5. Instant Buy-Back UPI Payout</h2></div>
+            <div class="form-group"><label>Payout Amount (₹ INR)</label><input type="number" id="payoutAmount" value="21800"></div>
+            <div class="form-group"><label>Your UPI ID (VPA)</label><input type="text" id="payoutVpa" value="user@okhdfcbank"></div>
+            <button class="btn btn-primary" onclick="triggerInstantPayout()">Transfer via Instant UPI Payout</button>
+            <div id="payoutResult" class="result-box" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Repair Network & Student Techs -->
+    <div id="tab-repair" class="tab-pane">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">🎓 Student Technician Layer (40% Off)</h2></div>
+            <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:1rem;">
+              Routes low-risk repairs (ports, batteries, screen protectors) to verified ITI / ECE engineering students in Nagpur.
+            </p>
+            <div class="form-group">
+              <label>Repair Type</label>
+              <input type="text" id="studentFaultType" value="Battery Replacement">
+            </div>
+            <button class="btn btn-primary" onclick="checkStudentTechs()">Find Eligible Student Technicians</button>
+            <div id="studentTechResult" class="result-box" style="display:none;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">📡 Broadcast Repair Request to Local Shops</h2></div>
+            <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:1rem;">
+              Broadcast fault details to registered independent shops in Sitabuldi / Dharampeth and compare quotes.
+            </p>
+            <button class="btn btn-secondary" onclick="broadcastRepair()">Broadcast & Compare Shop Bids</button>
+            <div id="broadcastResult" class="result-box" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">📋 Known-Defect & Statutory Warranty Check</h2></div>
+            <div class="form-group"><label>Brand</label><input type="text" id="defectBrand" value="OnePlus"></div>
+            <div class="form-group"><label>Model</label><input type="text" id="defectModel" value="OnePlus 9 Pro"></div>
+            <div class="form-group"><label>Symptoms</label><input type="text" id="defectSymptoms" value="Green line on screen after update"></div>
+            <button class="btn btn-outline" onclick="checkKnownDefects()">Check Recalls & Free Replacement Policies</button>
+            <div id="defectResult" class="result-box" style="display:none;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">🔒 Pre-Repair Data-Wipe & FRP Checklist</h2></div>
+            <div class="form-group">
+              <label>Device Platform</label>
+              <select id="wipePlatform" onchange="loadWipeChecklist()">
+                <option value="android">Android (Samsung, Xiaomi, OnePlus)</option>
+                <option value="ios">Apple iOS (iPhone / iPad)</option>
+              </select>
+            </div>
+            <button class="btn btn-outline" onclick="loadWipeChecklist()">View Step-by-Step Data Wipe Guide</button>
+            <div id="wipeResult" class="result-box" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Selling & Scam Shield -->
+    <div id="tab-selling" class="tab-pane">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">🛡️ Marketplace Scam Shield</h2></div>
+          <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:1rem;">
+            Paste suspicious buyer messages or payment requests to test for known OLX/Marketplace fraud patterns.
+          </p>
+          <div class="form-group">
+            <label>Buyer Message</label>
+            <textarea id="scamMessage" rows="4">Hello, I want to buy your phone immediately. I am sending you a QR code. Please scan QR and enter your UPI PIN to receive ₹28000.</textarea>
+          </div>
+          <button class="btn btn-secondary" onclick="analyzeScam()">Scan for Fraud Triggers</button>
+          <div id="scamResult" class="result-box" style="display:none;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">📝 AI P2P Listing Generator</h2></div>
+          <div class="form-group"><label>Model</label><input type="text" id="listingModel" value="Samsung Galaxy S21"></div>
+          <div class="form-group"><label>Storage & Color</label><input type="text" id="listingStorage" value="256GB Phantom Gray"></div>
+          <div class="form-group"><label>Suggested Fair Price (₹)</label><input type="number" id="listingPrice" value="28000"></div>
+          <button class="btn btn-primary" onclick="generateListing()">Generate Ready-to-Post Marketplace Listing</button>
+          <div id="listingResult" class="result-box" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Reuse, Memory Vault & Rewards -->
+    <div id="tab-reuse" class="tab-pane">
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">🌱 Item-Matched Repurposing Cards</h2></div>
+            <div class="form-group">
+              <label>Item Type</label>
+              <select id="repurposeType" onchange="loadRepurposingIdeas()">
+                <option value="smartphone">Old Smartphone</option>
+                <option value="tablet">Old Tablet / iPad</option>
+                <option value="denim jeans">Worn Denim Jeans & Textiles</option>
+              </select>
+            </div>
+            <button class="btn btn-outline" onclick="loadRepurposingIdeas()">Get DIY Repurposing Guides</button>
+            <div id="repurposeResult" class="result-box" style="display:none;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">🎁 Circular Points & Reward Discounts</h2></div>
+            <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:1rem;">
+              Earn points for donating to Goonj/Rotary or recycling e-waste. Redeem points for repair discounts.
+            </p>
+            <button class="btn btn-primary" onclick="redeemRewardVoucher()">Redeem 300 Points for ₹150 Repair Voucher</button>
+            <div id="rewardResult" class="result-box" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">💖 Memory Vault (Keep Outcome)</h2></div>
+            <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:1rem;">
+              Archive photos and sentimental stories of heirlooms or baby clothes so you can declutter guilt-free.
+            </p>
+            <div class="form-group"><label>Item Title</label><input type="text" id="vaultTitle" value="Grandfather Vintage HMT Watch"></div>
+            <div class="form-group"><label>Emotional Story</label><textarea id="vaultStory" rows="3">Gifted by grandfather in 1995. Keeps precious memories of childhood.</textarea></div>
+            <button class="btn btn-secondary" onclick="saveMemoryVault()">Preserve in Memory Vault</button>
+            <div id="vaultResult" class="result-box" style="display:none;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2 class="card-title">🧹 Festive Clean-Out (Diwali Safai)</h2></div>
+            <button class="btn btn-outline" onclick="loadFestiveWorkflow()">Load Guided Room-by-Room Workflow</button>
+            <div id="festiveResult" class="result-box" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: "Where Does This Go?" -->
+    <div id="tab-disposal" class="tab-pane">
+      <div class="card">
+        <div class="card-header"><h2 class="card-title">🔍 "Where Does This Go?" Universal Disposal Search</h2></div>
+        <div class="form-group">
+          <label>Search any household object (e.g. tube light, inverter battery, thermocol, old wire, blister pack, paint can)</label>
+          <div style="display:flex; gap:0.5rem;">
+            <input type="text" id="disposalSearch" placeholder="Type household item name..." value="tube light">
+            <button class="btn btn-primary" style="width:auto; padding:0.75rem 2rem;" onclick="searchDisposal()">Search</button>
+          </div>
+        </div>
+        <div id="disposalResult" class="result-box" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

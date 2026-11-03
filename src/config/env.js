@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
-dotenv.config();
+// Tests use built-in defaults, never a developer's local .env (keys would make them hit live APIs).
+if (!process.env.NODE_TEST_CONTEXT) dotenv.config();
 
 export const ENV = {
   PORT: parseInt(process.env.PORT || '4000', 10),
@@ -14,7 +15,8 @@ export const ENV = {
   S3_ENDPOINT: process.env.S3_ENDPOINT || '',
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
-  LOCAL_UPLOAD_DIR: process.env.LOCAL_UPLOAD_DIR || './uploads',
+  // Vercel's filesystem is read-only except /tmp
+  LOCAL_UPLOAD_DIR: process.env.LOCAL_UPLOAD_DIR || (process.env.VERCEL ? '/tmp/uploads' : './uploads'),
   DEFAULT_CITY: process.env.DEFAULT_CITY || 'nagpur',
 
   // Authentication & Security
@@ -24,7 +26,7 @@ export const ENV = {
   // Multimodal AI Vision Provider
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || '',
-  OPENROUTER_MODEL: process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001', // any vision-capable OpenRouter model
+  OPENROUTER_MODEL: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-5.5', // any vision-capable OpenRouter model
   VISION_AI_PROVIDER: process.env.VISION_AI_PROVIDER || (process.env.OPENROUTER_API_KEY ? 'openrouter' : process.env.GEMINI_API_KEY ? 'gemini' : 'heuristic'),
 
   // Payment & Payouts (Razorpay / Cashfree / Sandbox)
