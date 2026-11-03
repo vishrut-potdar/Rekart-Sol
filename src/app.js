@@ -96,3 +96,7 @@ export async function createApp() {
 
   return app;
 }
+
+// Vercel's Express runtime picks src/app.js as the entrypoint and serves its default export.
+const app = await createApp();
+export default app;
