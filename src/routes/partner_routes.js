@@ -2,11 +2,15 @@ import express from 'express';
 import { LeadManagerService } from '../services/partner/lead_manager.js';
 import { PartnerTerminalService } from '../services/partner/partner_terminal.js';
 import { PriceCalibrationService } from '../services/partner/price_calibration.js';
+import { authenticateToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Leads, settlements and the terminal are staff-only. /calibrate-price stays open: the public app crowdsources it.
+const partnerOnly = [authenticateToken, requireRole('partner_technician', 'ngo_coordinator')];
+
 // 1. Partner Lead Attribution (Isolated Neutral Commission)
-router.post('/leads', async (req, res, next) => {
+router.post('/leads', partnerOnly, async (req, res, next) => {
   try {
     const { itemId, partnerId, quotedPrice } = req.body;
     if (!itemId || !partnerId) {
@@ -20,7 +24,7 @@ router.post('/leads', async (req, res, next) => {
 });
 
 // Internal settlement summary (for admin/partner accounting)
-router.get('/leads/:id/settlement', async (req, res, next) => {
+router.get('/leads/:id/settlement', partnerOnly, async (req, res, next) => {
   try {
     const summary = await LeadManagerService.getInternalSettlementSummary(req.params.id);
     if (!summary) {
@@ -33,7 +37,7 @@ router.get('/leads/:id/settlement', async (req, res, next) => {
 });
 
 // 2. Partner Terminal Physical Check-in & Grade Amendment
-router.post('/terminal/check-in', async (req, res, next) => {
+router.post('/terminal/check-in', partnerOnly, async (req, res, next) => {
   try {
     const {
       leadId,
@@ -64,7 +68,7 @@ router.post('/terminal/check-in', async (req, res, next) => {
 });
 
 // 3. Partner Terminal Digital Proof Issuance
-router.post('/terminal/issue-proof', async (req, res, next) => {
+router.post('/terminal/issue-proof', partnerOnly, async (req, res, next) => {
   try {
     const {
       leadId,

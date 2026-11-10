@@ -7,14 +7,14 @@ import { PileDecompositionService } from '../services/vision/pile_decomposition.
 import { SingleItemClassifierService } from '../services/vision/single_item_classifier.js';
 import { MediaStorageService } from '../services/vision/media_storage.js';
 import { jobQueue } from '../services/queue/job_queue.js';
-import { optionalAuth } from '../middleware/auth.js';
+import { optionalAuth, authenticateToken } from '../middleware/auth.js';
 
 // Locally stored uploads are read back so AI vision providers receive the actual image, not a relative path.
 const readLocalUpload = url => (typeof url === 'string' && url.startsWith('/uploads/')
   ? fs.readFile(path.resolve(ENV.LOCAL_UPLOAD_DIR, path.basename(url))).catch(() => null)
   : null);
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 1 } });
 const router = express.Router();
 
 // 1. Pile-Mode Image Decomposition (Synchronous)
@@ -86,11 +86,7 @@ router.post('/upload-media', upload.single('file'), async (req, res, next) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded in form-data' });
     }
-    const uploaded = await MediaStorageService.uploadMedia({
-      filename: req.file.originalname,
-      buffer: req.file.buffer,
-      mediaType: req.file.mimetype
-    });
+    const uploaded = await MediaStorageService.uploadMedia({ buffer: req.file.buffer });
     return res.status(201).json({ success: true, data: uploaded });
   } catch (err) {
     next(err);
@@ -98,9 +94,12 @@ router.post('/upload-media', upload.single('file'), async (req, res, next) => {
 });
 
 // 3b. Pre-Signed Cloud Storage URL Generator (S3 / R2 direct upload)
-router.post('/presigned-upload-url', async (req, res, next) => {
+router.post('/presigned-upload-url', authenticateToken, async (req, res, next) => {
   try {
     const { filename = 'upload.jpg', mediaType = 'image/jpeg' } = req.body;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(mediaType)) {
+      return res.status(415).json({ error: 'Only JPEG, PNG or WebP images can be uploaded' });
+    }
     const presigned = await MediaStorageService.generatePresignedUploadUrl({ filename, mediaType });
     return res.status(200).json({ success: true, data: presigned });
   } catch (err) {

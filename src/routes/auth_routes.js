@@ -8,17 +8,20 @@ const router = express.Router();
 // Register new user
 router.post('/register', async (req, res, next) => {
   try {
-    const { email, password, full_name, phone, role, partner_id, city } = req.body;
-    if (!email || !password || !full_name) {
+    // role and partner_id are never taken from the request: public sign-up always creates a donor.
+    const { email, password, full_name, phone, city } = req.body;
+    if (![email, password, full_name].every(v => typeof v === 'string' && v)) {
       return res.status(400).json({ error: 'email, password, and full_name are required' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'password must be at least 8 characters' });
     }
     const result = await AuthService.register({
       email,
       password,
       full_name,
       phone,
-      role: role || 'donor',
-      partner_id,
+      role: 'donor',
       city: city || 'Nagpur'
     });
     return res.status(201).json({ success: true, data: result });

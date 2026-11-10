@@ -1,15 +1,16 @@
 import express from 'express';
 import { PayoutService } from '../services/payment/payout_service.js';
 import { CommissionBillingService } from '../services/payment/commission_billing.js';
-import { optionalAuth, requireRole } from '../middleware/auth.js';
+import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { ENV } from '../config/env.js';
 
 const router = express.Router();
 
 // 1. Process Instant Buy-Back UPI Payout
-router.post('/instant-payout', optionalAuth, async (req, res, next) => {
+router.post('/instant-payout', authenticateToken, async (req, res, next) => {
   try {
-    const { itemId, amount, vpaAddress, userId } = req.body;
-    const resolvedUserId = req.user?.userId || userId || 'user_guest';
+    const { itemId, amount, vpaAddress } = req.body;
+    const resolvedUserId = req.user.userId; // payouts go to the logged-in user, never a userId from the body
 
     if (!itemId || !amount || !vpaAddress) {
       return res.status(400).json({ error: 'itemId, amount, and vpaAddress are required' });
@@ -29,7 +30,7 @@ router.post('/instant-payout', optionalAuth, async (req, res, next) => {
 });
 
 // 2. Generate Partner Commission Invoice
-router.post('/partner-invoice', optionalAuth, async (req, res, next) => {
+router.post('/partner-invoice', authenticateToken, requireRole('partner_technician'), async (req, res, next) => {
   try {
     const { partnerId, billingPeriod = '2026-11' } = req.body;
     if (!partnerId) {
@@ -48,7 +49,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   const signature = req.headers['x-razorpay-signature'];
   const isValid = CommissionBillingService.verifyWebhookSignature(req.body, signature);
 
-  if (!isValid && process.env.NODE_ENV === 'production') {
+  if (!ENV.RAZORPAY_KEY_SECRET || !isValid) {
     return res.status(400).json({ error: 'Invalid webhook signature' });
   }
 

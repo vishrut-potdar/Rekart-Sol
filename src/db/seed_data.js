@@ -1,12 +1,15 @@
 import { db } from './connection.js';
 import bcrypt from 'bcryptjs';
+import { ENV } from '../config/env.js';
 
 export async function seedNagpurData() {
   // 0. Seed Demo Accounts
-  const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash('Rekart@123', salt);
+  // The dev password is published in this repo, so production only gets demo accounts (admin included)
+  // when SEED_DEMO_PASSWORD is set.
+  const demoPassword = ENV.IS_PRODUCTION ? ENV.SEED_DEMO_PASSWORD : 'Rekart@123';
+  const passwordHash = demoPassword ? await bcrypt.hash(demoPassword, await bcrypt.genSalt(10)) : null;
 
-  const users = [
+  const users = !passwordHash ? [] : [
     {
       id: 'u-admin-001',
       email: 'admin@rekart.in',
