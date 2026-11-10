@@ -8,7 +8,8 @@ const router = express.Router();
 // 1. Award Circular Points
 router.post('/award', optionalAuth, async (req, res, next) => {
   try {
-    const { userId, actionType, referenceId, pointsAwarded } = req.body;
+    // The points value comes from the server's table, never from the request.
+    const { userId, actionType, referenceId } = req.body;
     const resolvedUserId = req.user?.userId || userId || 'user_guest';
 
     if (!actionType) {
@@ -18,8 +19,7 @@ router.post('/award', optionalAuth, async (req, res, next) => {
     const result = await RewardsService.awardPoints({
       userId: resolvedUserId,
       actionType,
-      referenceId,
-      pointsAwarded
+      referenceId
     });
 
     return res.status(201).json({ success: true, data: result });

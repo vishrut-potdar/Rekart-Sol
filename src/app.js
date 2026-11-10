@@ -20,6 +20,7 @@ import rewardsRoutes from './routes/rewards_routes.js';
 import recyclingRoutes from './routes/recycling_routes.js';
 import aiRoutes from './routes/ai_routes.js';
 import { seedNagpurData } from './db/seed_data.js';
+import { rateLimit } from './middleware/rate_limit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,7 +29,10 @@ export async function createApp() {
   const app = express();
 
   // Basic Middlewares
-  app.use(cors());
+  // Behind Vercel's proxy the client IP is in X-Forwarded-For; trust it only there, so it can't be spoofed elsewhere.
+  if (process.env.VERCEL) app.set('trust proxy', 1);
+  app.disable('x-powered-by');
+  app.use(cors({ origin: ENV.CORS_ORIGINS.length ? ENV.CORS_ORIGINS : !ENV.IS_PRODUCTION }));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(requestLogger);
@@ -37,7 +41,7 @@ export async function createApp() {
   // Locally Express serves it; on Vercel the CDN serves public/** directly.
   const publicDir = path.resolve(__dirname, '../public');
   app.use(express.static(publicDir));
-  app.use('/uploads', express.static(path.resolve(ENV.LOCAL_UPLOAD_DIR)));
+  app.use('/uploads', express.static(path.resolve(ENV.LOCAL_UPLOAD_DIR), { setHeaders: res => res.set('X-Content-Type-Options', 'nosniff') }));
 
   // Health check & status
   app.get('/health', (req, res) => {
@@ -76,20 +80,22 @@ export async function createApp() {
   await seedNagpurData();
 
   // API v1 Routes
-  app.use('/api/v1/auth', authRoutes);
-  app.use('/api/v1/vision', visionRoutes);
+  // Public endpoints that cost money (AI calls, storage) or write data are throttled per IP.
+  const MIN = 60 * 1000;
+  app.use('/api/v1/auth', rateLimit({ windowMs: 15 * MIN, max: 20 }), authRoutes);
+  app.use('/api/v1/vision', rateLimit({ windowMs: 10 * MIN, max: 30 }), visionRoutes);
   app.use('/api/v1/triage', triageRoutes);
   app.use('/api/v1/calc', calculationRoutes);
   app.use('/api/v1/routing', routingRoutes);
-  app.use('/api/v1/partner', partnerRoutes);
+  app.use('/api/v1/partner', rateLimit({ windowMs: 10 * MIN, max: 60 }), partnerRoutes);
   app.use('/api/v1/payment', paymentRoutes);
   app.use('/api/v1/jobs', jobRoutes);
   app.use('/api/v1/repair', repairRoutes);
   app.use('/api/v1/selling', sellingRoutes);
   app.use('/api/v1/reuse', reuseRoutes);
-  app.use('/api/v1/rewards', rewardsRoutes);
+  app.use('/api/v1/rewards', rateLimit({ windowMs: 10 * MIN, max: 60 }), rewardsRoutes);
   app.use('/api/v1/recycling', recyclingRoutes);
-  app.use('/api/v1/ai', aiRoutes);
+  app.use('/api/v1/ai', rateLimit({ windowMs: 10 * MIN, max: 20 }), aiRoutes);
 
   // Global Error Handler
   app.use(errorHandler);

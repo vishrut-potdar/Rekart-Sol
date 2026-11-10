@@ -1,4 +1,5 @@
 import { AuthService } from '../services/auth/auth_service.js';
+import { ENV } from '../config/env.js';
 
 export function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -6,7 +7,7 @@ export function authenticateToken(req, res, next) {
 
   if (!token) {
     // If running in development and no token provided, allow guest/mock user for backward-compatible developer calls
-    if (req.headers['x-guest-user-id']) {
+    if (!ENV.IS_PRODUCTION && req.headers['x-guest-user-id']) {
       req.user = {
         userId: req.headers['x-guest-user-id'],
         role: 'donor',
