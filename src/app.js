@@ -1,12 +1,19 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { ENV } from './config/env.js';
 import { requestLogger } from './middleware/request_logger.js';
 import { errorHandler } from './middleware/error_handler.js';
+import { securityHeaders } from './middleware/security_headers.js';
+import { rateLimit } from './middleware/rate_limit.js';
+import { optionalAuth } from './middleware/auth.js';
+import { db } from './db/connection.js';
+import { AppError } from './utils/errors.js';
 import authRoutes from './routes/auth_routes.js';
 import visionRoutes from './routes/vision_routes.js';
+import decisionRoutes from './routes/decision_routes.js';
 import triageRoutes from './routes/triage_routes.js';
 import calculationRoutes from './routes/calculation_routes.js';
 import routingRoutes from './routes/routing_routes.js';
@@ -20,82 +27,122 @@ import rewardsRoutes from './routes/rewards_routes.js';
 import recyclingRoutes from './routes/recycling_routes.js';
 import aiRoutes from './routes/ai_routes.js';
 import { seedNagpurData } from './db/seed_data.js';
-import { rateLimit } from './middleware/rate_limit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
 
 export async function createApp() {
   const app = express();
 
-  // Basic Middlewares
-  // Behind Vercel's proxy the client IP is in X-Forwarded-For; trust it only there, so it can't be spoofed elsewhere.
   if (process.env.VERCEL) app.set('trust proxy', 1);
   app.disable('x-powered-by');
-  app.use(cors({ origin: ENV.CORS_ORIGINS.length ? ENV.CORS_ORIGINS : !ENV.IS_PRODUCTION }));
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(securityHeaders);
+  app.use(cors({
+    origin: ENV.CORS_ORIGINS.length ? ENV.CORS_ORIGINS : !ENV.IS_PRODUCTION,
+    credentials: true
+  }));
   app.use(requestLogger);
 
-  // Static frontend: public/index.html is the main app, legacy.html the old portal, partner.html the terminal.
-  // Locally Express serves it; on Vercel the CDN serves public/** directly.
+  // Mount raw-byte webhook parser BEFORE global express.json() so HMAC verifies raw bytes cleanly (C6).
+  app.use('/api/v1/payment/webhook', express.raw({ type: 'application/json', limit: '256kb' }));
+
+  // Default small JSON body limit (100kb); file uploads use multer's 10MB limit on /upload-media.
+  app.use(express.json({
+    limit: '100kb',
+    verify: (req, _res, buf) => {
+      req.rawBody = Buffer.from(buf);
+    }
+  }));
+  app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+
+  // Static frontend: public/index.html is the main app, partner.html the terminal.
   const publicDir = path.resolve(__dirname, '../public');
   app.use(express.static(publicDir));
-  app.use('/uploads', express.static(path.resolve(ENV.LOCAL_UPLOAD_DIR), { setHeaders: res => res.set('X-Content-Type-Options', 'nosniff') }));
 
-  // Health check & status
+  // Owner-checked private media serving (removes open public /uploads directory listing)
+  app.get('/uploads/:filename', optionalAuth, (req, res, next) => {
+    const safeName = path.basename(req.params.filename || '');
+    if (!safeName || safeName.startsWith('.')) {
+      return next(AppError.notFound('Media file not found'));
+    }
+    const targetUrl = `/uploads/${safeName}`;
+    const owningItem = Array.from(db.items.values()).find(
+      item => Array.isArray(item.raw_media_urls) && item.raw_media_urls.includes(targetUrl)
+    );
+    if (owningItem && owningItem.user_id && owningItem.user_id !== 'anon_session') {
+      if (!req.user) {
+        return next(AppError.unauthorized('Authentication required to access private item photo'));
+      }
+      if (owningItem.user_id !== req.user.userId && req.user.role !== 'admin') {
+        return next(AppError.forbidden('You do not own this media file'));
+      }
+    }
+
+    const filePath = path.resolve(ENV.LOCAL_UPLOAD_DIR, safeName);
+    if (!fs.existsSync(filePath)) {
+      return next(AppError.notFound('Media file not found'));
+    }
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.sendFile(filePath);
+  });
+
+  // Honest health check & status
   app.get('/health', (req, res) => {
+    const v1Features = [
+      'core_decision_engine',
+      'ai_vision_honest_fallback',
+      'exif_stripped_uploads',
+      'fair_price_shield',
+      'repair_or_release_matrix',
+      'ewaste_authorised_routing',
+      'p2p_listing_generator',
+      'marketplace_scam_shield',
+      'where_does_this_go_lookup',
+      'hyperlocal_matching'
+    ];
+    const v2Features = ENV.ENABLE_V2_MODULES
+      ? ['partner_terminal', 'instant_upi_payouts', 'circular_rewards_points', 'async_job_queue']
+      : [];
+
     res.status(200).json({
       status: 'UP',
       service: 'Rekart Backend Core',
       timestamp: new Date().toISOString(),
-      version: '2.0.0',
+      version: pkg.version,
       active_pilot_city: 'Nagpur',
-      features: [
-        'ai_vision_decomposition',
-        'dynamic_triage_trees',
-        'fair_price_shield',
-        'repair_or_release_matrix',
-        'student_technician_layer',
-        'shop_broadcast_comparator',
-        'known_defects_warranty_check',
-        'data_wipe_checklist',
-        'marketplace_scam_shield',
-        'p2p_listing_generator',
-        'circular_rewards_points',
-        'item_repurposing_library',
-        'memory_vault_keep_outcome',
-        'festive_cleanout_campaigns',
-        'where_does_this_go_lookup',
-        'hyperlocal_matching',
-        'partner_terminal',
-        'instant_upi_payouts',
-        'jwt_rbac_auth',
-        'async_job_queue'
-      ]
+      persistence: db.getPersistenceStatus(),
+      v2_modules_enabled: ENV.ENABLE_V2_MODULES,
+      features: [...v1Features, ...v2Features]
     });
   });
 
-  // Seed baseline data
+  // Seed baseline data (only populates missing baseline partners/benchmarks; preserves existing user items)
   await seedNagpurData();
 
-  // API v1 Routes
-  // Public endpoints that cost money (AI calls, storage) or write data are throttled per IP.
+  // API v1 Routes — every route group throttled by shared repository rate limiter
   const MIN = 60 * 1000;
-  app.use('/api/v1/auth', rateLimit({ windowMs: 15 * MIN, max: 20 }), authRoutes);
-  app.use('/api/v1/vision', rateLimit({ windowMs: 10 * MIN, max: 30 }), visionRoutes);
-  app.use('/api/v1/triage', triageRoutes);
-  app.use('/api/v1/calc', calculationRoutes);
-  app.use('/api/v1/routing', routingRoutes);
-  app.use('/api/v1/partner', rateLimit({ windowMs: 10 * MIN, max: 60 }), partnerRoutes);
-  app.use('/api/v1/payment', paymentRoutes);
-  app.use('/api/v1/jobs', jobRoutes);
-  app.use('/api/v1/repair', repairRoutes);
-  app.use('/api/v1/selling', sellingRoutes);
-  app.use('/api/v1/reuse', reuseRoutes);
-  app.use('/api/v1/rewards', rateLimit({ windowMs: 10 * MIN, max: 60 }), rewardsRoutes);
-  app.use('/api/v1/recycling', recyclingRoutes);
-  app.use('/api/v1/ai', rateLimit({ windowMs: 10 * MIN, max: 20 }), aiRoutes);
+  app.use('/api/v1/auth', rateLimit({ windowMs: 15 * MIN, max: 30, keyPrefix: 'auth' }), authRoutes);
+  app.use('/api/v1/vision', rateLimit({ windowMs: 10 * MIN, max: 30, keyPrefix: 'vision' }), visionRoutes);
+  app.use('/api/v1/decide', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'decide' }), decisionRoutes);
+  app.use('/api/v1/triage', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'triage' }), triageRoutes);
+  app.use('/api/v1/calc', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'calc' }), calculationRoutes);
+  app.use('/api/v1/routing', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'routing' }), routingRoutes);
+  app.use('/api/v1/partner', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'partner' }), partnerRoutes);
+  app.use('/api/v1/payment', rateLimit({ windowMs: 10 * MIN, max: 30, keyPrefix: 'payment' }), paymentRoutes);
+  app.use('/api/v1/jobs', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'jobs' }), jobRoutes);
+  app.use('/api/v1/repair', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'repair' }), repairRoutes);
+  app.use('/api/v1/selling', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'selling' }), sellingRoutes);
+  app.use('/api/v1/reuse', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'reuse' }), reuseRoutes);
+  app.use('/api/v1/rewards', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'rewards' }), rewardsRoutes);
+  app.use('/api/v1/recycling', rateLimit({ windowMs: 10 * MIN, max: 60, keyPrefix: 'recycling' }), recyclingRoutes);
+  app.use('/api/v1/ai', rateLimit({ windowMs: 10 * MIN, max: 20, keyPrefix: 'ai' }), aiRoutes);
+
+  // Unknown API routes return typed 404 JSON
+  app.use('/api', (req, res, next) => {
+    next(AppError.notFound('API endpoint not found'));
+  });
 
   // Global Error Handler
   app.use(errorHandler);

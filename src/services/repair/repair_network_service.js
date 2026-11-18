@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { db } from '../../db/connection.js';
 
 export class RepairNetworkService {
@@ -55,7 +55,9 @@ export class RepairNetworkService {
         specialization: 'Electronics & Hardware Micro-Soldering',
         rating: 4.8,
         completed_repairs_count: 47,
-        verification_status: 'institution_verified',
+        verification_status: 'sample_placeholder',
+        is_sample: true,
+        simulated: true,
         eligible_faults: lowRiskFaults,
         labour_discount_percentage: 40,
         hourly_rate_inr: 250,
@@ -68,7 +70,9 @@ export class RepairNetworkService {
         specialization: 'Embedded Systems & Mobile Diagnostics',
         rating: 4.9,
         completed_repairs_count: 62,
-        verification_status: 'institution_verified',
+        verification_status: 'sample_placeholder',
+        is_sample: true,
+        simulated: true,
         eligible_faults: lowRiskFaults,
         labour_discount_percentage: 45,
         hourly_rate_inr: 280,
@@ -77,6 +81,7 @@ export class RepairNetworkService {
     ];
 
     return {
+      is_sample_data: true,
       is_eligible_for_student_tech: isEligible,
       student_eligibility_reason: isEligible
         ? 'Fault is low-risk (modular component swap / cleaning). Eligible for verified student technician routing.'
@@ -95,13 +100,15 @@ export class RepairNetworkService {
     faultDescription,
     maxShops = 3
   }) {
-    const broadcastId = `bcast_${Date.now()}_${uuidv4().substring(0, 6)}`;
+    const broadcastId = `bcast_${Date.now()}_${crypto.randomUUID().substring(0, 6)}`;
 
     // Simulated responses from registered partner shops within radius
     const simulatedBids = [
       {
         shop_id: 'p-rep-001',
-        shop_name: 'Sitabuldi ProTech Device Hub',
+        shop_name: 'Sitabuldi ProTech Device Hub (Sample)',
+        is_sample: true,
+        simulated: true,
         distance_km: 0.52,
         proposed_solution: 'Aftermarket Grade A+ Display with 90-day warranty',
         part_grade: 'aftermarket_a_plus',
@@ -115,7 +122,9 @@ export class RepairNetworkService {
       },
       {
         shop_id: 'p-rep-002',
-        shop_name: 'Dharampeth Laptop & Appliance Lab',
+        shop_name: 'Dharampeth Laptop & Appliance Lab (Sample)',
+        is_sample: true,
+        simulated: true,
         distance_km: 1.84,
         proposed_solution: 'Original Service Pack Screen (Direct OEM pull)',
         part_grade: 'OEM',
@@ -129,7 +138,9 @@ export class RepairNetworkService {
       },
       {
         shop_id: 'p-rep-003',
-        shop_name: 'Sadar QuickFix Care',
+        shop_name: 'Sadar QuickFix Care (Sample)',
+        is_sample: true,
+        simulated: true,
         distance_km: 2.10,
         proposed_solution: 'Refurbished Original Glass Lamination (Preserving original OLED)',
         part_grade: 'reconditioned_oem',
@@ -147,6 +158,8 @@ export class RepairNetworkService {
 
     return {
       broadcast_id: broadcastId,
+      is_sample_data: true,
+      simulated: true,
       item_id: itemId,
       model_name: modelName,
       fault_description: faultDescription,

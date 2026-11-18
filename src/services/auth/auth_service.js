@@ -1,15 +1,18 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { db } from '../../db/connection.js';
 import { ENV } from '../../config/env.js';
+import { AppError } from '../../utils/errors.js';
+
+// Precomputed bcrypt hash used when email does not exist so login timing does not leak account existence.
+const DUMMY_BCRYPT_HASH = '$2b$10$CwTycUXWue0Thq9StjUM0uJ8u1S/j4H3x1k/h4o4xA9qQ4zM8U4uK';
 
 export class AuthService {
   static async register({ email, password, full_name, phone = null, role = 'donor', partner_id = null, city = 'Nagpur' }) {
     const existing = await db.findUserByEmail(email);
     if (existing) {
-      const err = new Error('User already exists with this email');
-      err.status = 409;
-      throw err;
+      throw AppError.conflict('User already exists with this email');
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -42,17 +45,11 @@ export class AuthService {
 
   static async login({ email, password }) {
     const user = await db.findUserByEmail(email);
-    if (!user) {
-      const err = new Error('Invalid email or password');
-      err.status = 401;
-      throw err;
-    }
+    const hashToCheck = user ? user.password_hash : DUMMY_BCRYPT_HASH;
+    const isMatch = await bcrypt.compare(password, hashToCheck);
 
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      const err = new Error('Invalid email or password');
-      err.status = 401;
-      throw err;
+    if (!user || !isMatch) {
+      throw AppError.unauthorized('Invalid email or password', 'INVALID_CREDENTIALS');
     }
 
     const token = this.generateToken(user);
@@ -70,13 +67,37 @@ export class AuthService {
     };
   }
 
+  static createAnonymousSession() {
+    const anonId = `anon_${crypto.randomUUID()}`;
+    const token = jwt.sign(
+      {
+        jti: crypto.randomUUID(),
+        userId: anonId,
+        email: null,
+        role: 'anonymous',
+        partnerId: null
+      },
+      ENV.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    return {
+      user: {
+        id: anonId,
+        role: 'anonymous',
+        city: 'Nagpur'
+      },
+      token
+    };
+  }
+
   static generateToken(user) {
     return jwt.sign(
       {
+        jti: crypto.randomUUID(),
         userId: user.id,
         email: user.email,
         role: user.role,
-        partnerId: user.partner_id
+        partnerId: user.partner_id || null
       },
       ENV.JWT_SECRET,
       { expiresIn: ENV.JWT_EXPIRES_IN }
@@ -86,7 +107,7 @@ export class AuthService {
   static verifyToken(token) {
     try {
       return jwt.verify(token, ENV.JWT_SECRET);
-    } catch (err) {
+    } catch {
       return null;
     }
   }

@@ -1,4 +1,38 @@
+import { z } from 'zod';
 import { ENV } from '../../config/env.js';
+
+export const SingleItemVisionSchema = z.object({
+  category: z.enum(['electronics', 'apparel', 'appliance', 'furniture', 'other', 'unknown']),
+  sub_category: z.string().max(100).nullable().optional().default(null),
+  brand: z.string().max(100).nullable().optional().default(null),
+  model_name: z.string().max(150).nullable().optional().default(null),
+  confidence: z.number().min(0).max(1).nullable().optional().default(null),
+  detected_features: z.array(z.string().max(100)).max(20).optional().default([]),
+  visual_defects: z.array(z.string().max(120)).max(20).optional().default([]),
+  suggested_flow: z.string().max(100).optional().default('manual_category_picker')
+});
+
+export const PileDetectionItemSchema = z.object({
+  box_id: z.string().max(40),
+  label: z.string().max(150),
+  category: z.enum(['electronics', 'apparel', 'appliance', 'furniture', 'other']).default('apparel'),
+  brand: z.string().max(100).nullable().optional().default('Generic'),
+  sub_type: z.string().max(100).optional().default('Garment'),
+  bounding_box: z.object({
+    x: z.number(),
+    y: z.number(),
+    width: z.number(),
+    height: z.number(),
+    confidence: z.number().min(0).max(1).optional()
+  }),
+  visual_defects: z.array(z.string()).optional().default([]),
+  color: z.string().max(60).optional().default('Unknown'),
+  provisional_grade: z.enum(['A', 'B', 'C', 'BER']).default('B'),
+  requires_exception_closeup: z.boolean().optional().default(false),
+  exception_reason: z.string().max(250).nullable().optional()
+});
+
+export const PileVisionSchema = z.array(PileDetectionItemSchema);
 
 const PILE_PROMPT = `You are Rekart's automated reverse-commerce garment vision model.
 Analyze this pile photograph of clothes. Locate each individual piece, return bounding box coordinates, category, brand, sub_type, color, visible defects, and provisional grade (A, B, C, or BER).
@@ -13,34 +47,55 @@ Output strictly valid JSON with this shape:
     "bounding_box": { "x": 0, "y": 0, "width": 100, "height": 100, "confidence": 0.95 },
     "visual_defects": ["stain", "tear"],
     "color": "Color",
-    "provisional_grade": "A/B/C/BER",
+    "provisional_grade": "A",
     "requires_exception_closeup": false
   }
 ]`;
 
-const singleItemPrompt = userHint => `Identify this item for reverse commerce triage. User hint: "${userHint}".
-Return JSON:
+const singleItemPrompt = userHint => `Identify this item for reverse commerce triage. User hint: "${String(userHint || '').replace(/"/g, "'").slice(0, 200)}".
+Return ONLY valid JSON:
 {
-  "category": "electronics/apparel/appliance/furniture",
-  "sub_category": "smartphone/laptop/washing_machine",
-  "brand": "Apple/Samsung/etc",
-  "model_name": "Exact Model",
-  "confidence": 0.95,
+  "category": "electronics|apparel|appliance|furniture|other|unknown",
+  "sub_category": "smartphone|laptop|headphones|jacket|mixer|chair|null",
+  "brand": "Apple|Samsung|etc|null",
+  "model_name": "Exact Model or null",
+  "confidence": 0.0 to 1.0,
   "detected_features": ["string"],
   "visual_defects": ["crack", "dent"],
   "suggested_flow": "electronics_mobile"
 }`;
 
+export function honestSingleItemFallback(reason = 'no_ai_provider_configured') {
+  return {
+    category: 'unknown',
+    sub_category: null,
+    brand: null,
+    model_name: null,
+    confidence: null,
+    simulated: true,
+    requires_manual_confirmation: true,
+    fallback_reason: reason,
+    detected_features: [],
+    visual_defects: [],
+    suggested_flow: 'manual_category_picker'
+  };
+}
+
 export class AiVisionProvider {
   /**
-   * Calls OpenRouter (OPENROUTER_API_KEY) or Gemini (GEMINI_API_KEY) vision if configured,
-   * otherwise uses the local heuristic model.
+   * Calls OpenRouter (OPENROUTER_API_KEY) or Gemini (GEMINI_API_KEY) vision if configured.
+   * Validates LLM JSON with Zod. When unavailable or invalid, returns honest unknown fallback
+   * with confidence: null and simulated: true so the UI asks the user to confirm.
    */
   static async analyzeGarmentPile(imageBufferOrUrl) {
     if (ENV.OPENROUTER_API_KEY) {
       try {
         const result = await this._callOpenRouter(PILE_PROMPT, imageBufferOrUrl);
-        if (Array.isArray(result)) return result;
+        const parsed = PileVisionSchema.safeParse(result);
+        if (parsed.success) {
+          return parsed.data.map(item => ({ ...item, simulated: false }));
+        }
+        console.warn('[AiVisionProvider] OpenRouter pile output failed schema validation');
       } catch (err) {
         console.warn('[AiVisionProvider] OpenRouter pile analysis failed, falling back:', err.message);
       }
@@ -48,15 +103,17 @@ export class AiVisionProvider {
     if (ENV.GEMINI_API_KEY) {
       try {
         const geminiResult = await this._callGeminiVisionForPile(imageBufferOrUrl);
-        if (geminiResult && Array.isArray(geminiResult)) {
-          return geminiResult;
+        const parsed = PileVisionSchema.safeParse(geminiResult);
+        if (parsed.success) {
+          return parsed.data.map(item => ({ ...item, simulated: false }));
         }
+        console.warn('[AiVisionProvider] Gemini pile output failed schema validation');
       } catch (err) {
-        console.warn('[AiVisionProvider] Gemini Vision API call failed, falling back to local engine:', err.message);
+        console.warn('[AiVisionProvider] Gemini Vision API call failed, falling back to demo detections:', err.message);
       }
     }
 
-    // No AI provider available: fixed sample detections, flagged simulated so the UI can label them as a demo
+    // No AI provider available: fixed sample detections, flagged simulated so the UI labels them as demo
     return [
       {
         box_id: 'box_01',
@@ -103,67 +160,56 @@ export class AiVisionProvider {
     if (ENV.OPENROUTER_API_KEY) {
       try {
         const result = await this._callOpenRouter(singleItemPrompt(userHint), imageBufferOrUrl);
-        if (result?.category) return result;
+        const parsed = SingleItemVisionSchema.safeParse(result);
+        if (parsed.success && parsed.data.category !== 'unknown') {
+          return {
+            ...parsed.data,
+            simulated: false,
+            requires_manual_confirmation: (parsed.data.confidence ?? 0) < 0.75
+          };
+        }
+        console.warn('[AiVisionProvider] OpenRouter single-item output invalid or unknown');
       } catch (err) {
         console.warn('[AiVisionProvider] OpenRouter single-item analysis failed, falling back:', err.message);
       }
     }
+
     if (ENV.GEMINI_API_KEY) {
       try {
         const geminiResult = await this._callGeminiVisionForSingleItem(imageBufferOrUrl, userHint);
-        if (geminiResult && geminiResult.category) {
-          return geminiResult;
+        const parsed = SingleItemVisionSchema.safeParse(geminiResult);
+        if (parsed.success && parsed.data.category !== 'unknown') {
+          return {
+            ...parsed.data,
+            simulated: false,
+            requires_manual_confirmation: (parsed.data.confidence ?? 0) < 0.75
+          };
         }
+        console.warn('[AiVisionProvider] Gemini single-item output invalid or unknown');
       } catch (err) {
-        console.warn('[AiVisionProvider] Gemini single-item analysis failed, falling back to local engine:', err.message);
+        console.warn('[AiVisionProvider] Gemini single-item analysis failed, falling back:', err.message);
       }
     }
 
-    const hintLower = (userHint || '').toLowerCase();
-    if (hintLower.includes('phone') || hintLower.includes('iphone') || hintLower.includes('samsung') || hintLower.includes('mobile')) {
-      const isApple = hintLower.includes('iphone') || hintLower.includes('apple');
-      return {
-        category: 'electronics',
-        sub_category: 'smartphone',
-        brand: isApple ? 'Apple' : 'Samsung',
-        model_name: isApple ? 'iPhone 13' : 'Galaxy S21',
-        confidence: 0.96,
-        detected_features: ['dual_camera_module', 'aluminum_frame', 'lightning_or_usbc_port', 'screen_scratch_minor'],
-        visual_defects: ['front_glass_micro_scratches'],
-        suggested_flow: 'electronics_mobile'
-      };
-    }
-
-    if (hintLower.includes('laptop') || hintLower.includes('dell')) {
-      return {
-        category: 'electronics',
-        sub_category: 'laptop',
-        brand: 'Dell',
-        model_name: 'Inspiron 15',
-        confidence: 0.93,
-        detected_features: ['hinge_assembly', 'chiclet_keyboard', 'touchpad'],
-        visual_defects: ['keyboard_wear_moderate'],
-        suggested_flow: 'electronics_laptop'
-      };
-    }
-
-    return {
-      category: 'apparel',
-      sub_category: 'shirt_top',
-      brand: 'Levis',
-      model_name: 'Cotton Casual Shirt',
-      confidence: 0.89,
-      detected_features: ['cotton_weave', 'collar', 'buttons_intact'],
-      visual_defects: [],
-      suggested_flow: 'apparel_standard'
-    };
+    // Honest fallback (C7): never invent a brand/model or fake 0.96 confidence from userHint
+    return honestSingleItemFallback(
+      ENV.OPENROUTER_API_KEY || ENV.GEMINI_API_KEY
+        ? 'ai_provider_unavailable_or_invalid'
+        : 'no_ai_provider_configured'
+    );
   }
 
   static async _callGeminiVisionForPile(imageBufferOrUrl) {
-    const prompt = PILE_PROMPT;
+    return this._callGemini(PILE_PROMPT, imageBufferOrUrl);
+  }
 
+  static async _callGeminiVisionForSingleItem(imageBufferOrUrl, userHint) {
+    return this._callGemini(singleItemPrompt(userHint), imageBufferOrUrl);
+  }
+
+  static async _callGemini(prompt, imageBufferOrUrl) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${ENV.GEMINI_API_KEY}`;
-    
+
     let base64Data = '';
     let mimeType = 'image/jpeg';
     if (Buffer.isBuffer(imageBufferOrUrl)) {
@@ -189,7 +235,8 @@ export class AiVisionProvider {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(ENV.AI_TIMEOUT_MS)
     });
 
     if (!response.ok) {
@@ -197,44 +244,8 @@ export class AiVisionProvider {
     }
 
     const jsonRes = await response.json();
-    const textOutput = jsonRes.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textOutput = jsonRes.candidates?.[0]?.content?.parts?.[0]?.text || '';
     return JSON.parse(textOutput);
-  }
-
-  static async _callGeminiVisionForSingleItem(imageBufferOrUrl, userHint) {
-    const prompt = singleItemPrompt(userHint);
-
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${ENV.GEMINI_API_KEY}`;
-    let base64Data = '';
-    let mimeType = 'image/jpeg';
-    if (Buffer.isBuffer(imageBufferOrUrl)) {
-      base64Data = imageBufferOrUrl.toString('base64');
-    } else {
-      return null;
-    }
-
-    const payload = {
-      contents: [{
-        parts: [
-          { text: prompt },
-          { inline_data: { mime_type: mimeType, data: base64Data } }
-        ]
-      }],
-      generationConfig: { response_mime_type: 'application/json' }
-    };
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
-
-    const jsonRes = await response.json();
-    return JSON.parse(jsonRes.candidates?.[0]?.content?.parts?.[0]?.text);
   }
 
   static async _callOpenRouter(prompt, imageBufferOrUrl) {
@@ -249,10 +260,11 @@ export class AiVisionProvider {
       body: JSON.stringify({
         model: ENV.OPENROUTER_MODEL,
         messages: [{ role: 'user', content: [{ type: 'text', text: prompt + '\nRespond with JSON only.' }, { type: 'image_url', image_url: { url: imageUrl } }] }]
-      })
+      }),
+      signal: AbortSignal.timeout(ENV.AI_TIMEOUT_MS)
     });
-    if (!response.ok) throw new Error(`OpenRouter API error: ${response.status} ${await response.text()}`);
+    if (!response.ok) throw new Error(`OpenRouter API error: ${response.status}`);
     const text = (await response.json()).choices?.[0]?.message?.content || '';
-    return JSON.parse(text.replace(/^\s*```(?:json)?|```\s*$/g, '')); // models sometimes wrap JSON in a code fence
+    return JSON.parse(text.replace(/^\s*```(?:json)?|```\s*$/g, ''));
   }
 }

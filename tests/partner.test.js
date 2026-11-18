@@ -24,15 +24,14 @@ test('LeadManagerService enforces neutral pricing isolation', async () => {
 
   assert.ok(lead.lead_id);
   assert.equal(lead.status, 'referred');
-  // Client facing lead does not leak partner_fee
   assert.equal(lead.partner_fee, undefined);
 
-  // Settlement internal API reveals the fee
   const settlement = await LeadManagerService.getInternalSettlementSummary(lead.lead_id);
-  assert.equal(settlement.partner_fee, 180); // 10% of 1800
+  assert.equal(settlement.partner_fee, 180);
 });
 
-test('PartnerTerminalService enables technician grade check-in and issues digital proof', async () => {
+test('PartnerTerminalService enables scoped technician grade check-in and issues HMAC-signed proof', async () => {
+  await seedNagpurData();
   const item = await db.createItem({
     category: 'electronics',
     provisional_grade: 'B'
@@ -43,7 +42,6 @@ test('PartnerTerminalService enables technician grade check-in and issues digita
     partnerId: 'p-cpcb-001'
   });
 
-  // Physical inspection amendments
   const checkIn = await PartnerTerminalService.physicalCheckIn({
     leadId: lead.lead_id,
     partnerId: 'p-cpcb-001',
@@ -56,16 +54,18 @@ test('PartnerTerminalService enables technician grade check-in and issues digita
   assert.equal(checkIn.confirmed_grade, 'BER');
   assert.equal(checkIn.is_grade_amended, true);
 
-  // Issue digital proof certificate
   const proof = await PartnerTerminalService.issueDigitalProof({
     leadId: lead.lead_id,
-    proofType: 'formal_recycling_certificate',
+    partnerId: 'p-cpcb-001',
+    proofType: 'partner_handoff_receipt',
     documentUrl: 'https://cdn.rekart.in/certs/nagpur-midc-0091.pdf',
     issuerName: 'Vidarbha Clean-Earth CPCB Recycler'
   });
 
   assert.ok(proof.certificate_number);
-  assert.ok(proof.tamper_proof_signature);
+  assert.equal(proof.signature_algorithm, 'HMAC-SHA256');
+  assert.equal(PartnerTerminalService.verifyDigitalProof(proof), true);
+  assert.equal(PartnerTerminalService.verifyDigitalProof({ ...proof, document_url: 'https://evil.test' }), false);
 });
 
 test('PriceCalibrationService collects post-service payment logs and updates benchmarks', async () => {

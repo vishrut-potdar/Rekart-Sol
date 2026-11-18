@@ -3,10 +3,15 @@
    Memory Vault, festive clean-out and Pile Mode. Loaded after rekart-api.js and shares the design's globals. */
 (() => {
   const API = '/api/v1';
-  async function req(path, opts) {
-    const r = await fetch(API + path, opts);
+  async function req(path, opts = {}) {
+    const r = await fetch(API + path, { credentials: 'same-origin', ...opts });
     const j = await r.json().catch(() => ({}));
-    if (!j.success) throw new Error(j.error?.message || j.error || t('fx_err'));
+    if (!r.ok || !j.success) {
+      const err = new Error(j.error?.message || (typeof j.error === 'string' ? j.error : null) || t('fx_err'));
+      err.code = j.error?.code;
+      err.status = r.status;
+      throw err;
+    }
     return j.data;
   }
   const get = path => req(path);
@@ -43,13 +48,11 @@
   const apiLang = () => ({ en: 'en', hi: 'hi', hg: 'hinglish' })[LANG] || 'en';
   const brandOf = p => p.name.split(' ')[0];
 
-  // Per-viewer guest id + last known points (browser storage is only a convenience; the server holds the balance).
+  // Browser storage holds local UI convenience only; session identity lives in the httpOnly cookie.
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } }
   };
-  let uid = store.get('rekart_uid', null);
-  if (!uid) { uid = 'guest_' + Math.random().toString(36).slice(2, 10); store.set('rekart_uid', uid); }
 
   // State that should survive re-renders (language switch, item reload), keyed by item id.
   const state = {};
@@ -219,7 +222,7 @@
           el('div', 'text-xs text-brand-800 mt-0.5', `${x.labour_discount_percentage}% ${t('fx_off')} · ★ ${x.rating}`));
         body.append(r);
       });
-    }).catch(e => body.append(errorLine(e)));
+    }).catch(e => (e.code === 'FEATURE_DISABLED_IN_V1' || e.status === 404 ? c.remove() : body.append(errorLine(e))));
     return c;
   }
 
@@ -232,9 +235,13 @@
       const b = btn(t('fx_bc_btn'), () => {
         b.disabled = true;
         const note = document.getElementById('itemCustomNote')?.value;
-        post('/repair/broadcast-request', { itemId: P.id, modelName: P.name, faultDescription: note || P.fault })
+        post('/repair/broadcast-request', { itemId: String(P.id), modelName: P.name, faultDescription: note || P.fault })
           .then(d => { s.bids = d; renderFeatures(); })
-          .catch(e => { b.disabled = false; body.append(errorLine(e)); });
+          .catch(e => {
+            if (e.code === 'FEATURE_DISABLED_IN_V1' || e.status === 404) return c.remove();
+            b.disabled = false;
+            body.append(errorLine(e));
+          });
       });
       body.append(b);
       return c;
@@ -259,12 +266,12 @@
     const bal = el('div', 'text-sm');
     c.append(row);
     row.append(bal);
-    get(`/rewards/balance?userId=${enc(uid)}`).then(d => {
+    get('/rewards/balance').then(d => {
       bal.replaceChildren(el('span', 'text-stone-500', `${t('fx_pts_bal')}: `), el('b', 'text-brand-900', String(d.points_balance)));
       if (d.points_balance >= 200) {
         const b = btn(t('fx_redeem'), () => {
           b.disabled = true;
-          post('/rewards/redeem', { userId: uid, pointsToRedeem: 200 }).then(v => {
+          post('/rewards/redeem', { pointsToRedeem: 200 }).then(v => {
             const box = el('div', 'mt-3 rounded-2xl bg-brand-50 px-4 py-3 text-sm');
             box.append(el('div', 'font-mono font-bold text-brand-950', `${t('fx_voucher')}: ${v.voucher_code}`),
               el('div', 'text-xs text-stone-600', `₹${v.discount_amount_inr} · ${tf('fx_valid', { d: v.validity_days })}`),
@@ -276,7 +283,7 @@
         });
         row.append(b);
       } else row.append(el('span', 'text-xs text-stone-500', tf('fx_pts_need', { n: 200 - d.points_balance })));
-    }).catch(e => c.append(errorLine(e)));
+    }).catch(e => (e.code === 'FEATURE_DISABLED_IN_V1' || e.status === 404 || e.status === 401 ? c.remove() : c.append(errorLine(e))));
     return c;
   }
 
@@ -352,12 +359,14 @@
   window.donateGateClick = () => {
     baseDonate();
     if (!P.ngos?.length || $$('.ckrow.done').length < 3 || awarded.has(P.id)) return;
-    const action = { apparel: 'ngo_donation_apparel', books: 'ngo_donation_books' }[P.cat] || 'ngo_donation';
-    post('/rewards/award', { userId: uid, actionType: action, referenceId: `${P.id}:${P.ngos[0].id}` }).then(r => {
+    const action = { apparel: 'ngo_donation_apparel', books: 'ngo_donation_books' }[P.cat] || 'society_drive_dropoff';
+    post('/rewards/award', { actionType: action, referenceId: `${P.id}:${P.ngos[0].id}` }).then(r => {
       awarded.add(P.id); store.set('rekart_awarded', [...awarded]);
       renderFeatures(); // refresh the points balance
       setTimeout(() => toast(tf('fx_pts_earned', { n: r.points_earned, b: r.new_points_balance })), 2600); // after the NGO toast
-    }).catch(console.error);
+    }).catch(err => {
+      if (err?.code !== 'FEATURE_DISABLED_IN_V1' && err?.status !== 404) console.error(err);
+    });
   };
 
   /* ---------- REUSE ---------- */
@@ -395,7 +404,7 @@
       if (!title.value.trim()) return title.focus();
       if (!story.value.trim()) return story.focus();
       b.disabled = true;
-      post('/reuse/memory-vault', { userId: uid, title: title.value.trim(), emotionalStory: story.value.trim(), reviewReminderMonths: s.months }).then(v => {
+      post('/reuse/memory-vault', { title: title.value.trim(), emotionalStory: story.value.trim(), reviewReminderMonths: s.months }).then(v => {
         const list = store.get('rekart_vault', []);
         list.unshift({ title: v.title, remind: v.review_reminder_date });
         store.set('rekart_vault', list.slice(0, 20));
@@ -468,7 +477,7 @@
       try {
         const fd = new FormData(); fd.append('file', file);
         const up = await req('/vision/upload-media', { method: 'POST', body: fd });
-        const d = await post('/vision/decompose-pile', { batchPhotoUrl: up.url, userId: uid, assumedCategory: 'apparel' });
+        const d = await post('/vision/decompose-pile', { batchPhotoUrl: up.url, assumedCategory: 'apparel' });
         const rows = [el('p', 'text-xs text-stone-500', tf('fx_pile_found', { n: d.items_detected_count }))];
         if (d.items.some(x => x.metadata?.simulated)) rows.unshift(el('p', 'text-xs text-amber-900 bg-amber-50 rounded-lg px-3 py-2', t('fx_pile_demo')));
         d.items.forEach(x => {

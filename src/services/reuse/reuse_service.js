@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 
 export class ReuseService {
   /**
@@ -109,7 +109,7 @@ export class ReuseService {
     reminderDate.setMonth(reminderDate.getMonth() + reviewReminderMonths);
 
     const vaultEntry = {
-      id: `vault_${uuidv4().substring(0, 8)}`,
+      id: `vault_${crypto.randomUUID().substring(0, 8)}`,
       user_id: userId,
       title,
       emotional_story: emotionalStory,

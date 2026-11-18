@@ -1,4 +1,5 @@
 import { db } from '../../db/connection.js';
+import { AppError } from '../../utils/errors.js';
 
 /**
  * Partner Attribution & Lead Management Service
@@ -9,15 +10,14 @@ export class LeadManagerService {
   static async createAttributedLead({ itemId, partnerId, quotedPrice = null }) {
     const partner = await db.getPartner(partnerId);
     if (!partner) {
-      throw new Error(`Partner not found: ${partnerId}`);
+      throw AppError.notFound('Partner not found');
     }
 
     const item = await db.getItem(itemId);
     if (!item) {
-      throw new Error(`Item not found: ${itemId}`);
+      throw AppError.notFound('Item not found');
     }
 
-    // Commission is isolated and calculated asynchronously
     const partnerFee = quotedPrice ? quotedPrice * (partner.commission_rate || 0.05) : 0;
 
     const lead = await db.createLead({
@@ -37,7 +37,7 @@ export class LeadManagerService {
       partner_name: partner.name,
       partner_type: partner.partner_type,
       status: lead.status,
-      // Note: partner_fee is omitted from user views to maintain neutrality
+      // partner_fee is omitted from user views to maintain neutrality
       created_at: lead.created_at
     };
   }

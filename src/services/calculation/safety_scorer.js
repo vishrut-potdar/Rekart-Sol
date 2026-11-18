@@ -35,6 +35,26 @@ export class SafetyScorerEngine {
     }
 
     if (
+      symptomsStr.includes('mercury') ||
+      symptomsStr.includes('cfl') ||
+      symptomsStr.includes('tube light') ||
+      faultLower.includes('mercury') ||
+      symptomsStr.includes('acid') ||
+      symptomsStr.includes('leaking battery')
+    ) {
+      return {
+        safety_level: SAFETY_LEVELS.DO_NOT_ATTEMPT,
+        hazard_type: 'TOXIC_MERCURY_OR_ACID_HAZARD',
+        risk_score: 96,
+        required_precautions: [
+          'Do NOT break or crush; ventilate room if glass is cracked',
+          'Wrap carefully and drop off only at a CPCB/MPCB authorised hazardous collection point'
+        ],
+        allow_diy_guide: false
+      };
+    }
+
+    if (
       applianceType.includes('microwave') ||
       faultLower.includes('magnetron') ||
       faultLower.includes('high_voltage_capacitor')

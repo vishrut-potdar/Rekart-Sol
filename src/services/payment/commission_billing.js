@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { db } from '../../db/connection.js';
 import { ENV } from '../../config/env.js';
+import { AppError } from '../../utils/errors.js';
 
 export class CommissionBillingService {
   /**
@@ -9,7 +10,7 @@ export class CommissionBillingService {
   static async generatePartnerInvoice(partnerId, billingPeriod) {
     const partner = await db.getPartner(partnerId);
     if (!partner) {
-      throw new Error(`Partner not found: ${partnerId}`);
+      throw AppError.notFound('Partner not found');
     }
 
     const leads = await db.listLeadsByPartner(partnerId);
@@ -44,14 +45,22 @@ export class CommissionBillingService {
   }
 
   /**
-   * Validates Razorpay Webhook signature
+   * Validates Razorpay Webhook signature against raw payload bytes using constant-time comparison.
    */
-  static verifyWebhookSignature(payloadBody, receivedSignature) {
-    const expectedSignature = crypto
+  static verifyWebhookSignature(rawPayload, receivedSignature) {
+    if (!ENV.RAZORPAY_KEY_SECRET) return false;
+    if (!receivedSignature || typeof receivedSignature !== 'string') return false;
+    if (!Buffer.isBuffer(rawPayload) && typeof rawPayload !== 'string') return false;
+
+    const expectedHex = crypto
       .createHmac('sha256', ENV.RAZORPAY_KEY_SECRET)
-      .update(typeof payloadBody === 'string' ? payloadBody : JSON.stringify(payloadBody))
+      .update(rawPayload)
       .digest('hex');
 
-    return expectedSignature === receivedSignature;
+    const expectedBuf = Buffer.from(expectedHex, 'utf8');
+    const receivedBuf = Buffer.from(receivedSignature.trim(), 'utf8');
+
+    if (expectedBuf.length !== receivedBuf.length) return false;
+    return crypto.timingSafeEqual(expectedBuf, receivedBuf);
   }
 }

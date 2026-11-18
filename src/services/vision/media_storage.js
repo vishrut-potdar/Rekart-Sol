@@ -5,6 +5,8 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ENV } from '../../config/env.js';
 import { db } from '../../db/connection.js';
+import { AppError } from '../../utils/errors.js';
+import { stripExifMetadata } from '../../utils/exif_stripper.js';
 
 let s3Client = null;
 if (ENV.AWS_ACCESS_KEY_ID && ENV.AWS_SECRET_ACCESS_KEY) {
@@ -29,17 +31,17 @@ export function sniffImageType(buffer) {
 
 export class MediaStorageService {
   /**
-   * Uploads media buffer to S3 or local storage
+   * Strips EXIF/GPS metadata and uploads media buffer to S3 or local storage.
    */
-  static async uploadMedia({ buffer }) {
+  static async uploadMedia({ buffer, userId = null }) {
     const type = sniffImageType(buffer);
     if (!type) {
-      const err = new Error('Only JPEG, PNG or WebP images can be uploaded');
-      err.status = 415;
-      throw err;
+      throw AppError.unsupportedMedia('Only JPEG, PNG or WebP images can be uploaded');
     }
+
+    const cleanBuffer = stripExifMetadata(buffer, type.mime);
     const mediaType = type.mime;
-    const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+    const hash = crypto.createHash('sha256').update(cleanBuffer).digest('hex');
     // The stored name never includes client-supplied text, so an upload can't be served back as HTML or script.
     const safeName = `${Date.now()}_${hash.substring(0, 12)}.${type.ext}`;
 
@@ -47,21 +49,22 @@ export class MediaStorageService {
       const command = new PutObjectCommand({
         Bucket: ENV.S3_BUCKET,
         Key: safeName,
-        Body: buffer,
-        ContentType: mediaType
+        Body: cleanBuffer,
+        ContentType: mediaType,
+        Metadata: userId ? { owner_id: String(userId) } : undefined
       });
       await s3Client.send(command);
 
-      const s3Url = ENV.S3_ENDPOINT
-        ? `${ENV.S3_ENDPOINT}/${ENV.S3_BUCKET}/${safeName}`
-        : `https://${ENV.S3_BUCKET}.s3.${ENV.S3_REGION}.amazonaws.com/${safeName}`;
+      const getCmd = new GetObjectCommand({ Bucket: ENV.S3_BUCKET, Key: safeName });
+      const signedReadUrl = await getSignedUrl(s3Client, getCmd, { expiresIn: 900 });
 
       return {
-        url: s3Url,
+        url: signedReadUrl,
         key: safeName,
         sha256: hash,
-        size_bytes: buffer.length,
+        size_bytes: cleanBuffer.length,
         media_type: mediaType,
+        exif_stripped: true,
         storage: 's3'
       };
     }
@@ -72,16 +75,31 @@ export class MediaStorageService {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
     const filePath = path.join(uploadDir, safeName);
-    fs.writeFileSync(filePath, buffer);
+    fs.writeFileSync(filePath, cleanBuffer);
 
     return {
       url: `/uploads/${safeName}`,
       key: safeName,
       sha256: hash,
-      size_bytes: buffer.length,
+      size_bytes: cleanBuffer.length,
       media_type: mediaType,
+      exif_stripped: true,
       storage: 'local'
     };
+  }
+
+  /**
+   * Deletes a local upload file by key if present.
+   */
+  static deleteLocalMedia(key) {
+    if (!key) return false;
+    const safeKey = path.basename(String(key));
+    const filePath = path.join(path.resolve(ENV.LOCAL_UPLOAD_DIR), safeKey);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -105,7 +123,7 @@ export class MediaStorageService {
       };
     }
 
-    // Mock direct upload target for development
+    // Local direct upload target for development
     return {
       upload_url: `/api/v1/vision/upload-media`,
       public_url: `/uploads/${safeName}`,

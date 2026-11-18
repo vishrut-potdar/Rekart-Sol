@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { PileDecompositionService } from '../vision/pile_decomposition.js';
 
 class JobQueue {
@@ -7,7 +7,7 @@ class JobQueue {
   }
 
   createJob(jobType, payload) {
-    const jobId = `job_${jobType}_${Date.now()}_${uuidv4().substring(0, 8)}`;
+    const jobId = `job_${jobType}_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
     const jobRecord = {
       id: jobId,
       type: jobType,

@@ -65,4 +65,11 @@ test('RewardsService awards circular points and generates discount voucher', asy
   assert.ok(voucher.voucher_code.startsWith('REKART-SAVE'));
   assert.equal(voucher.discount_amount_inr, 150); // 300 points = 150 INR
   assert.equal(voucher.new_points_balance, award.new_points_balance + 250 - 300); // deducted
+
+  const verified = await RewardsService.verifyAndUseVoucher({
+    voucherCode: voucher.voucher_code,
+    partnerId: 'p-rep-001',
+    redeem: true
+  });
+  assert.equal(verified.status, 'redeemed');
 });

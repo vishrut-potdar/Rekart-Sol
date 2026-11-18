@@ -1,62 +1,66 @@
 import express from 'express';
+import { z } from 'zod';
 import { DecisionTreeEngine } from '../services/triage/decision_tree.js';
 import { HardwareTelemetryParser } from '../services/triage/telemetry_parser.js';
 import { SymptomAndFaultRanker } from '../services/triage/fault_ranker.js';
 import { SafetyScorerEngine } from '../services/calculation/safety_scorer.js';
 import { db } from '../db/connection.js';
+import { validate } from '../middleware/validate.js';
+import { optionalAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
+const QuestionsQuerySchema = z.object({
+  category: z.string().max(64).optional().default('electronics'),
+  language: z.enum(['en', 'hi', 'hinglish']).optional().default('en')
+});
+
+const TriageSessionSchema = z.object({
+  itemId: z.string().max(128).optional(),
+  category: z.enum(['electronics', 'apparel', 'appliance', 'furniture', 'other']).optional().default('electronics'),
+  language: z.enum(['en', 'hi', 'hinglish']).optional().default('en'),
+  answers: z.record(z.string(), z.string().max(120)).optional().default({}),
+  telemetry: z.record(z.string(), z.unknown()).optional().default({})
+});
+
 // 1. Dynamic Decision-Tree Questions (en, hi, hinglish)
-router.get('/questions', (req, res) => {
-  const { category = 'electronics', language = 'en' } = req.query;
-  const tree = DecisionTreeEngine.getQuestionTree(category, language);
+router.get('/questions', validate({ query: QuestionsQuerySchema }), (req, res) => {
+  const tree = DecisionTreeEngine.getQuestionTree(req.query.category, req.query.language);
   return res.status(200).json({ success: true, data: tree });
 });
 
 // 2. Pile Exception Queries
 router.post('/exception-query', (req, res) => {
-  const { metadata = {}, language = 'en' } = req.body;
+  const { metadata = {}, language = 'en' } = req.body || {};
   const exceptions = DecisionTreeEngine.generatePileExceptionQueries(metadata, language);
   return res.status(200).json({ success: true, data: exceptions });
 });
 
 // 3. Hardware Telemetry Parser
 router.post('/parse-telemetry', (req, res) => {
-  const telemetry = req.body.telemetry || req.body;
+  const telemetry = req.body?.telemetry || req.body || {};
   const analysis = HardwareTelemetryParser.parse(telemetry);
   return res.status(200).json({ success: true, data: analysis });
 });
 
 // 4. Symptom & Fault Ranker
 router.post('/rank-faults', (req, res) => {
-  const { category = 'electronics', answers = {}, telemetrySummary = {} } = req.body;
+  const { category = 'electronics', answers = {}, telemetrySummary = {} } = req.body || {};
   const ranked = SymptomAndFaultRanker.rank({ category, answers, telemetrySummary });
   return res.status(200).json({ success: true, data: ranked });
 });
 
 // 5. Complete Triage Submission
-router.post('/session', async (req, res, next) => {
+router.post('/session', optionalAuth, validate({ body: TriageSessionSchema }), async (req, res, next) => {
   try {
-    const {
-      itemId,
-      category = 'electronics',
-      language = 'en',
-      answers = {},
-      telemetry = {}
-    } = req.body;
+    const { itemId, category, language, answers, telemetry } = req.body;
 
-    // A. Parse telemetry
     const telemetryReport = HardwareTelemetryParser.parse(telemetry);
-
-    // B. Rank faults
     const faultReport = SymptomAndFaultRanker.rank({
       category,
       answers,
       telemetrySummary: telemetryReport
     });
-
-    // C. Safety score
     const safetyReport = SafetyScorerEngine.evaluateRisk({
       category,
       faultType: faultReport.primary_fault?.fault || '',
@@ -64,9 +68,8 @@ router.post('/session', async (req, res, next) => {
       isSwollenBattery: telemetryReport.is_hazard_flagged || answers.q3_battery_health === 'bat_swollen'
     });
 
-    // D. Persist session
     const session = await db.saveTriageSession({
-      item_id: itemId,
+      item_id: itemId || `triage_${Date.now()}`,
       language,
       question_flow_id: `${category}_core_v1`,
       answers_payload: answers,
@@ -86,7 +89,7 @@ router.post('/session', async (req, res, next) => {
       success: true,
       data: {
         session_id: session.id,
-        item_id: itemId,
+        item_id: itemId || session.item_id,
         telemetry: telemetryReport,
         fault_analysis: faultReport,
         safety_assessment: safetyReport

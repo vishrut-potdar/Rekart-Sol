@@ -1,9 +1,18 @@
 import express from 'express';
+import { z } from 'zod';
 import { RepairNetworkService } from '../services/repair/repair_network_service.js';
 import { KnownDefectsService } from '../services/repair/known_defects_service.js';
 import { DataWipeChecklistService } from '../services/repair/data_wipe_checklist.js';
+import { validate } from '../middleware/validate.js';
+import { requireV2Module } from '../middleware/feature_flag.js';
 
 const router = express.Router();
+
+const BroadcastSchema = z.object({
+  itemId: z.string().max(128).optional().default('item-demo'),
+  modelName: z.string().min(1).max(160).optional().default('iPhone 13'),
+  faultDescription: z.string().min(1).max(300).optional().default('Screen cracked')
+});
 
 // 1. Questions to Ask Your Shop
 router.get('/questions-template', (req, res) => {
@@ -12,8 +21,8 @@ router.get('/questions-template', (req, res) => {
   return res.status(200).json({ success: true, data: template });
 });
 
-// 2. Student Technician Layer
-router.get('/student-technicians', async (req, res, next) => {
+// 2. Student Technician Layer (sample/v2 gated)
+router.get('/student-technicians', requireV2Module('student_technicians'), async (req, res, next) => {
   try {
     const { cityId = 'nagpur', category = 'electronics', faultType = '' } = req.query;
     const result = await RepairNetworkService.findStudentTechnicians({ cityId, category, faultType });
@@ -23,15 +32,10 @@ router.get('/student-technicians', async (req, res, next) => {
   }
 });
 
-// 3. Broadcast Repair Request to Local Shops
-router.post('/broadcast-request', async (req, res, next) => {
+// 3. Broadcast Repair Request to Local Shops (sample/v2 gated)
+router.post('/broadcast-request', requireV2Module('shop_broadcast'), validate({ body: BroadcastSchema }), async (req, res, next) => {
   try {
-    const { itemId = 'item-demo', modelName = 'iPhone 13', faultDescription = 'Screen cracked' } = req.body;
-    const broadcast = await RepairNetworkService.broadcastRepairRequest({
-      itemId,
-      modelName,
-      faultDescription
-    });
+    const broadcast = await RepairNetworkService.broadcastRepairRequest(req.body);
     return res.status(201).json({ success: true, data: broadcast });
   } catch (err) {
     next(err);

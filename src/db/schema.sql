@@ -234,3 +234,89 @@ CREATE TABLE commission_invoices (
     paid_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 11. Blueprint Core Entities: Categories, Item Photos, Decisions, Point Ledger, Vouchers
+CREATE TABLE categories (
+    slug VARCHAR(64) PRIMARY KEY,
+    display_name VARCHAR(100) NOT NULL,
+    ewaste_regulated BOOLEAN DEFAULT FALSE,
+    default_lifespan_years NUMERIC(4, 1) DEFAULT 5.0
+);
+
+CREATE TABLE item_photos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    storage_key VARCHAR(255) NOT NULL,
+    sha256 CHAR(64) NOT NULL,
+    exif_stripped BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE decisions (
+    decision_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recommended_path VARCHAR(32) NOT NULL,
+    safety_override JSONB NOT NULL DEFAULT '{}'::jsonb,
+    ranked_paths JSONB NOT NULL DEFAULT '[]'::jsonb,
+    what_would_change_this JSONB NOT NULL DEFAULT '[]'::jsonb,
+    provenance JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE point_ledger (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    entry_type VARCHAR(16) NOT NULL,
+    action_type VARCHAR(64) NOT NULL,
+    reference_id VARCHAR(128) NOT NULL,
+    points INT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT uq_point_award UNIQUE (user_id, action_type, reference_id)
+);
+
+CREATE TABLE vouchers (
+    voucher_code VARCHAR(64) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    partner_id UUID REFERENCES partners(id),
+    points_redeemed INT NOT NULL,
+    discount_amount_inr INT NOT NULL,
+    status VARCHAR(24) DEFAULT 'active',
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Owner-only Row-Level Security (RLS)
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE item_photos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE decisions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE triage_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payout_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE point_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vouchers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY items_owner_policy ON items
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY item_photos_owner_policy ON item_photos
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY decisions_owner_policy ON decisions
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY triage_sessions_owner_policy ON triage_sessions
+    USING (EXISTS (SELECT 1 FROM items WHERE items.id = triage_sessions.item_id AND items.user_id = auth.uid()));
+
+CREATE POLICY payout_transactions_owner_policy ON payout_transactions
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY point_ledger_owner_policy ON point_ledger
+    USING (user_id = auth.uid());
+
+CREATE POLICY vouchers_owner_policy ON vouchers
+    USING (user_id = auth.uid());

@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { PileDecompositionService } from '../src/services/vision/pile_decomposition.js';
 import { SingleItemClassifierService } from '../src/services/vision/single_item_classifier.js';
 import { MediaStorageService } from '../src/services/vision/media_storage.js';
+import { SingleItemVisionSchema } from '../src/services/vision/ai_vision_provider.js';
 
-test('PileDecompositionService decomposes bulk garment image into discrete child items', async () => {
+test('PileDecompositionService decomposes bulk garment image into discrete child items flagged simulated when offline', async () => {
   const result = await PileDecompositionService.decomposePhoto({
     batchPhotoUrl: 'https://cdn.rekart.in/mock/garment-pile-01.jpg',
     userId: 'user_nagpur_101',
@@ -16,7 +17,8 @@ test('PileDecompositionService decomposes bulk garment image into discrete child
   assert.equal(result.items.length, 3);
 
   const shirt = result.items.find(i => i.brand === 'Levis');
-  assert.ok(shirt, 'Should recognize Levis item');
+  assert.ok(shirt, 'Should include sample Levis item');
+  assert.equal(shirt.metadata.simulated, true, 'Offline detections must be flagged simulated');
   assert.ok(shirt.bounding_box, 'Should generate bounding box coordinates');
   assert.equal(shirt.parent_batch_id, result.batch_id);
 
@@ -24,16 +26,37 @@ test('PileDecompositionService decomposes bulk garment image into discrete child
   assert.ok(sweater.metadata.requires_exception_closeup, 'Should flag visual ambiguity on cuff');
 });
 
-test('SingleItemClassifierService accurately classifies electronics and extracts sub-features', async () => {
+test('SingleItemClassifierService returns honest unknown fallback when no AI key is configured (C7)', async () => {
   const classification = await SingleItemClassifierService.classifyImage({
     imageUrl: 'https://cdn.rekart.in/mock/iphone13.jpg',
     userHint: 'iPhone 13 with cracked front glass'
   });
 
-  assert.equal(classification.category, 'electronics');
-  assert.equal(classification.brand, 'Apple');
-  assert.equal(classification.model_name, 'iPhone 13');
-  assert.ok(classification.confidence > 0.9);
+  assert.equal(classification.category, 'unknown');
+  assert.equal(classification.confidence, null);
+  assert.equal(classification.simulated, true);
+  assert.equal(classification.requires_manual_confirmation, true);
+  assert.equal(classification.suggested_flow, 'manual_category_picker');
+});
+
+test('SingleItemVisionSchema validates valid AI JSON and rejects malformed outputs', () => {
+  const valid = SingleItemVisionSchema.safeParse({
+    category: 'electronics',
+    sub_category: 'smartphone',
+    brand: 'Apple',
+    model_name: 'iPhone 13',
+    confidence: 0.91,
+    detected_features: ['dual_camera'],
+    visual_defects: ['cracked_glass'],
+    suggested_flow: 'electronics_mobile'
+  });
+  assert.equal(valid.success, true);
+
+  const badCategory = SingleItemVisionSchema.safeParse({
+    category: 'spaceship',
+    confidence: 0.9
+  });
+  assert.equal(badCategory.success, false);
 });
 
 test('MediaStorageService creates immutable timestamped pre-pickup archive', async () => {

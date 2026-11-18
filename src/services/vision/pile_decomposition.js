@@ -1,5 +1,5 @@
 import { db } from '../../db/connection.js';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { AiVisionProvider } from './ai_vision_provider.js';
 
 /**
@@ -13,7 +13,7 @@ export class PileDecompositionService {
    * Connects to AI Vision Provider (Gemini / PyTorch model) with deterministic fallback.
    */
   static async decomposePhoto({ batchPhotoUrl, userId, assumedCategory = 'apparel', imageBuffer = null }) {
-    const batchId = uuidv4();
+    const batchId = crypto.randomUUID();
 
     // Use AI Vision Provider
     const detections = await AiVisionProvider.analyzeGarmentPile(imageBuffer || batchPhotoUrl);
