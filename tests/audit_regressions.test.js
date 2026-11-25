@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { createApp } from '../src/app.js';
 import { db } from '../src/db/connection.js';
 import { ENV } from '../src/config/env.js';
+import { DecisionEngine } from '../src/services/decision/decision_engine.js';
 import { AuthService } from '../src/services/auth/auth_service.js';
 import { WhereDoesThisGoService } from '../src/services/recycling/where_does_this_go.js';
 import { ChannelComparisonEngine } from '../src/services/calculation/channel_comparison.js';
@@ -309,5 +310,72 @@ test('Privacy & Auth: EXIF stripped on upload, x-guest-user-id rejected, cookie 
       headers: { Cookie: cookiePair }
     });
     assert.equal(afterRes.status, 401);
+  });
+});
+
+test('Publish-ready upgrades: Community hubs API, Phone Grade A + quote provenance, and SPA routing fallback', async () => {
+  // Pricing calculator Grade A fix & safety_override schema
+  const gradeAEval = DecisionEngine.evaluate({
+    category: 'electronics',
+    modelName: 'Xiaomi Redmi Note 10',
+    working: 'yes',
+    condition: 'like_new',
+    ageYears: 1,
+    originalPrice: 14999
+  });
+  assert.equal(gradeAEval.item_summary.condition_grade, 'A');
+  assert.equal(gradeAEval.item_summary.original_price_inr, 14999);
+  assert.equal(gradeAEval.item_summary.repair_cost_range_inr, null);
+
+  const hazardEval = DecisionEngine.evaluate({
+    category: 'electronics',
+    modelName: 'Power bank',
+    working: 'no',
+    condition: 'poor',
+    isSwollenBattery: true
+  });
+  assert.equal(hazardEval.safety_override.active, true);
+  assert.ok(hazardEval.safety_override.hazard_flag);
+  assert.ok(hazardEval.safety_override.reason);
+
+  await withServer(async baseUrl => {
+    // 1. Community hubs API serves NGOs, demands, and gatherings/drives
+    const hubsRes = await fetch(`${baseUrl}/api/v1/routing/community-hubs?type=ngo`);
+    assert.equal(hubsRes.status, 200);
+    const hubsJson = await hubsRes.json();
+    assert.equal(hubsJson.success, true);
+    assert.ok(hubsJson.data.partners.some(p => /goonj/i.test(p.name)));
+    assert.ok(Array.isArray(hubsJson.data.active_demands) && hubsJson.data.active_demands.length >= 1);
+    assert.ok(Array.isArray(hubsJson.data.gatherings_and_drives) && hubsJson.data.gatherings_and_drives.length >= 1);
+    assert.ok(Array.isArray(hubsJson.data.general_ngo_rules) && hubsJson.data.general_ngo_rules.length >= 3);
+
+    // 2. A submitted repair quote is displayed without an unsupported fairness benchmark.
+    const decRes = await fetch(`${baseUrl}/api/v1/decide`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'electronics',
+        modelName: 'Xiaomi Redmi Note 10',
+        working: 'partly',
+        condition: 'fair',
+        ageBracket: '3-5',
+        faultType: 'Screen Replacement',
+        quotedRepairCost: 1900,
+        originalPrice: 14999
+      })
+    });
+    assert.equal(decRes.status, 200);
+    const decJson = await decRes.json();
+    assert.equal(decJson.data.fair_price_shield, null);
+    assert.equal(decJson.data.phone_pricing.repair_cost_inr, 1900);
+    assert.equal(decJson.data.item_summary.original_price_inr, 14999);
+
+    // 3. SPA HTML fallback serves index.html on client-side routes (/community, /saves)
+    const spaRes = await fetch(`${baseUrl}/community`, {
+      headers: { Accept: 'text/html' }
+    });
+    assert.equal(spaRes.status, 200);
+    const spaHtml = await spaRes.text();
+    assert.ok(spaHtml.includes('<div id="root"></div>'));
   });
 });

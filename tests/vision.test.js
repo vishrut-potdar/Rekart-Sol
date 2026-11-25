@@ -71,3 +71,39 @@ test('MediaStorageService creates immutable timestamped pre-pickup archive', asy
   assert.ok(archive.immutable_hash, 'Should have SHA-256 integrity signature');
   assert.equal(archive.verification_status, 'locked_and_archived');
 });
+
+test('direct scan sends stripped PNG bytes to the configured Gemini model', async t => {
+  const { createApp } = await import('../src/app.js');
+  const { ENV } = await import('../src/config/env.js');
+  const { AuthService } = await import('../src/services/auth/auth_service.js');
+  const original = { GEMINI_API_KEY: ENV.GEMINI_API_KEY, GEMINI_MODEL: ENV.GEMINI_MODEL, OPENROUTER_API_KEY: ENV.OPENROUTER_API_KEY };
+  Object.assign(ENV, { GEMINI_API_KEY: 'synthetic-key', GEMINI_MODEL: 'synthetic-vision', OPENROUTER_API_KEY: '' });
+  t.after(() => Object.assign(ENV, original));
+  const fetchLocal = globalThis.fetch;
+  let request;
+  t.mock.method(globalThis, 'fetch', (url, options) => {
+    if (!String(url).startsWith('https://generativelanguage.googleapis.com/')) return fetchLocal(url, options);
+    request = { url, ...options };
+    return Promise.resolve(Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify({
+      category: 'electronics', sub_category: 'smartphone', brand: 'Example', model_name: 'Example Phone',
+      confidence: 0.92, visual_defects: ['cracked screen']
+    }) }] } }] }));
+  });
+  const server = (await createApp()).listen(0, '127.0.0.1');
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  await new Promise(resolve => server.once('listening', resolve));
+  const token = AuthService.generateToken({ id: 'scan-demo', role: 'donor' });
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64');
+  const form = new FormData();
+  form.append('file', new Blob([png], { type: 'image/png' }), 'test.png');
+  const url = 'http://127.0.0.1:' + server.address().port + '/api/v1/vision/scan';
+  const response = await fetch(url, { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.data.classification.model_name, 'Example Phone');
+  assert.deepEqual(result.data.classification.visual_defects, ['cracked screen']);
+  assert.equal(result.data.exif_stripped, true);
+  assert.match(request.url, /synthetic-vision:generateContent$/);
+  assert.equal(request.headers['x-goog-api-key'], 'synthetic-key');
+  assert.equal(JSON.parse(request.body).contents[0].parts[1].inline_data.mime_type, 'image/png');
+});

@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { ENV } from '../config/env.js';
 import { PileDecompositionService } from '../services/vision/pile_decomposition.js';
 import { SingleItemClassifierService } from '../services/vision/single_item_classifier.js';
-import { MediaStorageService } from '../services/vision/media_storage.js';
+import { stripExifMetadata } from '../utils/exif_stripper.js';
+import { MediaStorageService, sniffImageType } from '../services/vision/media_storage.js';
 import { jobQueue } from '../services/queue/job_queue.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -20,6 +21,7 @@ const readLocalUpload = url => (typeof url === 'string' && url.startsWith('/uplo
   : null);
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 1 } });
+const scanUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024, files: 1, fields: 1, fieldSize: 1000, parts: 3 } });
 const router = express.Router();
 
 const DecomposePileSchema = z.object({
@@ -97,6 +99,24 @@ router.post('/classify-single', authenticateToken, validate({ body: ClassifySing
     const imageBuffer = await readLocalUpload(imageUrl);
     const classification = await SingleItemClassifierService.classifyImage({ imageUrl, userHint, imageBuffer });
     return res.status(200).json({ success: true, data: classification });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Scan directly from the cleaned request bytes. No temporary photo URL is needed.
+router.post('/scan', authenticateToken, scanUpload.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) throw AppError.badRequest('Choose a photo to scan.', 'MISSING_FILE');
+    const type = sniffImageType(req.file.buffer);
+    if (!type) throw AppError.unsupportedMedia('Choose a JPEG, PNG or WebP photo.');
+    await enforceAiQuota(req);
+    const imageBuffer = stripExifMetadata(req.file.buffer, type.mime);
+    const classification = await SingleItemClassifierService.classifyImage({
+      imageBuffer,
+      userHint: typeof req.body.userHint === 'string' ? req.body.userHint.slice(0, 200) : ''
+    });
+    res.json({ success: true, data: { classification, exif_stripped: true } });
   } catch (err) {
     next(err);
   }

@@ -8,8 +8,9 @@ export class ListingGeneratorService {
     testedFunctions = ['Touch Screen', 'Face ID', 'Cameras', 'Speakers', 'Charging'],
     knownFlaws = ['Minor pocket scuffs on aluminum edge', 'Battery health 85%'],
     accessoriesIncluded = ['Original Box', 'USB-C to Lightning Cable'],
-    suggestedPrice = 36000
+    suggestedPrice
   }) {
+    if (!Number.isFinite(suggestedPrice) || suggestedPrice <= 0) throw new RangeError('A seller price is required');
     const optimisticPrice = Math.round(suggestedPrice * 1.08);
     const quickSalePrice = Math.round(suggestedPrice * 0.92);
 

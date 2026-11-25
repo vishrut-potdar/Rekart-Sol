@@ -118,7 +118,8 @@ export async function createApp() {
     });
   });
 
-  // Seed baseline data (only populates missing baseline partners/benchmarks; preserves existing user items)
+  // Hydrate cloud state on cold starts before seeding missing Nagpur baseline data
+  await db.hydrateFromFirebase();
   await seedNagpurData();
 
   // API v1 Routes — every route group throttled by shared repository rate limiter
@@ -142,6 +143,20 @@ export async function createApp() {
   // Unknown API routes return typed 404 JSON
   app.use('/api', (req, res, next) => {
     next(AppError.notFound('API endpoint not found'));
+  });
+
+  // SPA HTML fallback for client-side routes (/community, /saves, /scan, etc.)
+  app.get('*', (req, res, next) => {
+    const acceptsHtml = (req.headers.accept || '').includes('text/html');
+    const isFileLike = path.extname(req.path) !== '';
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || isFileLike || !acceptsHtml) {
+      return next();
+    }
+    const spaEntry = path.join(publicDir, 'index.html');
+    if (fs.existsSync(spaEntry)) {
+      return res.sendFile(spaEntry);
+    }
+    return next();
   });
 
   // Global Error Handler

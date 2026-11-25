@@ -235,6 +235,62 @@ class FirebaseSyncClient {
       }
     }
   }
+
+  async fetchRoot(collections) {
+    if (!this.enabled || process.env.NODE_TEST_CONTEXT) return null;
+    if (this.target === 'firestore') {
+      if (!this.clientEmail || !this.privateKey) return null;
+      try {
+        const headers = await this._headers();
+        if (!headers.Authorization) return null;
+        const buckets = await Promise.all(collections.map(async collection => {
+          const records = {};
+          const base = await this._docUrl(collection, 'placeholder');
+          const url = new URL(base.slice(0, -'/placeholder'.length));
+          url.searchParams.set('pageSize', '100');
+          let pageToken;
+          do {
+            if (pageToken) url.searchParams.set('pageToken', pageToken);
+            const res = await fetch(url, { headers, signal: AbortSignal.timeout(5000) });
+            if (!res.ok) throw new Error('Firestore list HTTP ' + res.status);
+            const page = await res.json();
+            for (const document of page.documents || []) {
+              const id = document.name.split('/').at(-1);
+              records[id] = fromFirestoreValue({ mapValue: { fields: document.fields || {} } });
+            }
+            pageToken = page.nextPageToken;
+          } while (pageToken);
+          return [collection, records];
+        }));
+        return Object.fromEntries(buckets);
+      } catch (err) {
+        console.warn('[FirebaseSync] Firestore hydration failed:', err.message);
+        return null;
+      }
+    }
+    if (!this.databaseUrl) return null;
+    try {
+      let url = `${this.databaseUrl.replace(/\/$/, '')}/.json`;
+      if (this.clientEmail && this.privateKey) {
+        const token = await this._getAccessToken().catch(() => null);
+        if (token) url += `?access_token=${encodeURIComponent(token)}`;
+      } else {
+        const idToken = await this._getAnonymousIdToken().catch(() => null);
+        if (idToken) url += `?auth=${encodeURIComponent(idToken)}`;
+      }
+      const res = await fetch(url, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000)
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      if (!process.env.NODE_TEST_CONTEXT) {
+        console.warn('[FirebaseSync] Cold-start hydration skipped:', err.message);
+      }
+      return null;
+    }
+  }
 }
 
 export class PersistentRepository {
@@ -360,6 +416,47 @@ export class PersistentRepository {
     return this.getPersistenceStatus();
   }
 
+  async hydrateFromFirebase() {
+    if (!this.firebase.enabled || this._hydratedFromFirebase || process.env.NODE_TEST_CONTEXT) {
+      return false;
+    }
+    this._hydratedFromFirebase = true;
+    const root = await this.firebase.fetchRoot([
+      'users', 'items', 'decisions', 'partners', 'partner_demands', 'society_drives',
+      'price_benchmarks', 'point_balances', 'vouchers'
+    ]);
+    if (!root || typeof root !== 'object') return false;
+
+    const mergeMap = (collectionName, targetMap) => {
+      const bucket = root[collectionName];
+      if (!bucket || typeof bucket !== 'object') return;
+      for (const [k, record] of Object.entries(bucket)) {
+        if (record && typeof record === 'object' && !targetMap.has(k)) {
+          targetMap.set(k, record);
+        }
+      }
+    };
+
+    mergeMap('users', this.users);
+    mergeMap('items', this.items);
+    for (const record of Object.values(root.decisions || {})) {
+      if (!record?.item_id) continue;
+      const existing = this.decisions.get(record.item_id);
+      if (!existing || String(existing.updated_at || '') < String(record.updated_at || '')) {
+        this.decisions.set(record.item_id, record);
+      }
+    }
+    mergeMap('partners', this.partners);
+    mergeMap('partner_demands', this.partnerDemands);
+    mergeMap('society_drives', this.societyDrives);
+    mergeMap('price_benchmarks', this.priceBenchmarks);
+    mergeMap('point_balances', this.pointBalances);
+    mergeMap('vouchers', this.vouchers);
+
+    this._persist();
+    return true;
+  }
+
   getStoragePath() {
     return this.storagePath;
   }
@@ -399,7 +496,7 @@ export class PersistentRepository {
 
   _syncFirebase(collection, id, record) {
     if (this.firebase.enabled) {
-      void this.firebase.upsert(collection, id, record);
+      return this.firebase.upsert(collection, id, record);
     }
   }
 
@@ -485,7 +582,12 @@ export class PersistentRepository {
     };
     this.users.set(id, user);
     this._persist();
-    this._syncFirebase('users', id, { ...user, password_hash: undefined });
+    // Password hashes may only be stored behind service-account-only access.
+    await this._syncFirebase('users', id, {
+      ...user,
+      password_hash: this.firebase.target === 'firestore' && this.firebase.authMode === 'service_account'
+        ? user.password_hash : undefined
+    });
     return user;
   }
 
@@ -537,7 +639,7 @@ export class PersistentRepository {
     };
     this.items.set(id, item);
     this._persist();
-    this._syncFirebase('items', id, item);
+    await this._syncFirebase('items', id, item);
     return item;
   }
 
@@ -555,7 +657,7 @@ export class PersistentRepository {
     };
     this.items.set(id, updated);
     this._persist();
-    this._syncFirebase('items', id, updated);
+    await this._syncFirebase('items', id, updated);
     return updated;
   }
 
@@ -578,7 +680,7 @@ export class PersistentRepository {
     };
     this.decisions.set(record.item_id || id, record);
     this._persist();
-    this._syncFirebase('decisions', id, record);
+    await this._syncFirebase('decisions', id, record);
     return record;
   }
 

@@ -52,6 +52,10 @@ export const ENV = {
   PROOF_SIGNING_SECRET: process.env.PROOF_SIGNING_SECRET || process.env.JWT_SECRET || 'rekart_dev_proof_hmac_secret_2026',
 
   // Multimodal AI Vision Provider & Quotas
+  PHONE_PRICING_DATA_JSON: process.env.PHONE_PRICING_DATA_JSON || '',
+  ALLOW_RETAIL_PRICE_PUBLICATION: process.env.ALLOW_RETAIL_PRICE_PUBLICATION === 'true',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || '',
+  OPENROUTER_VISION_MODEL: process.env.OPENROUTER_VISION_MODEL || '',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || '',
   OPENROUTER_MODEL: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-5.5', // any vision-capable OpenRouter model

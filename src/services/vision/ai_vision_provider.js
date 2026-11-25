@@ -1,3 +1,4 @@
+import { sniffImageType } from './media_storage.js';
 import { z } from 'zod';
 import { ENV } from '../../config/env.js';
 
@@ -53,7 +54,7 @@ Output strictly valid JSON with this shape:
 ]`;
 
 const singleItemPrompt = userHint => `Identify this item for reverse commerce triage. User hint: "${String(userHint || '').replace(/"/g, "'").slice(0, 200)}".
-Return ONLY valid JSON:
+Identify brand and exact model only when visible evidence supports them. Otherwise return null. Report only visible defects, never infer battery health or functionality. Return ONLY valid JSON:
 {
   "category": "electronics|apparel|appliance|furniture|other|unknown",
   "sub_category": "smartphone|laptop|headphones|jacket|mixer|chair|null",
@@ -208,11 +209,15 @@ export class AiVisionProvider {
   }
 
   static async _callGemini(prompt, imageBufferOrUrl) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${ENV.GEMINI_API_KEY}`;
+    if (!ENV.GEMINI_MODEL) throw new Error('GEMINI_MODEL is required for Gemini vision');
+    const model = ENV.GEMINI_MODEL.replace(/^models\//, '');
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
     let base64Data = '';
     let mimeType = 'image/jpeg';
     if (Buffer.isBuffer(imageBufferOrUrl)) {
+      mimeType = sniffImageType(imageBufferOrUrl)?.mime;
+      if (!mimeType) return null;
       base64Data = imageBufferOrUrl.toString('base64');
     } else if (typeof imageBufferOrUrl === 'string' && imageBufferOrUrl.startsWith('data:')) {
       const parts = imageBufferOrUrl.split(',');
@@ -229,12 +234,12 @@ export class AiVisionProvider {
           { inline_data: { mime_type: mimeType, data: base64Data } }
         ]
       }],
-      generationConfig: { response_mime_type: 'application/json' }
+      generationConfig: { maxOutputTokens: 2048, responseMimeType: 'application/json' }
     };
 
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': ENV.GEMINI_API_KEY },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(ENV.AI_TIMEOUT_MS)
     });
@@ -250,15 +255,19 @@ export class AiVisionProvider {
 
   static async _callOpenRouter(prompt, imageBufferOrUrl) {
     let imageUrl;
-    if (Buffer.isBuffer(imageBufferOrUrl)) imageUrl = `data:image/jpeg;base64,${imageBufferOrUrl.toString('base64')}`;
-    else if (typeof imageBufferOrUrl === 'string' && /^(data:|https?:)/.test(imageBufferOrUrl)) imageUrl = imageBufferOrUrl;
+    if (Buffer.isBuffer(imageBufferOrUrl)) {
+      const type = sniffImageType(imageBufferOrUrl);
+      if (!type) return null;
+      imageUrl = `data:${type.mime};base64,${imageBufferOrUrl.toString('base64')}`;
+    } else if (typeof imageBufferOrUrl === 'string' && /^(data:|https?:)/.test(imageBufferOrUrl)) imageUrl = imageBufferOrUrl;
     else return null;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${ENV.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json', 'X-Title': 'Rekart' },
       body: JSON.stringify({
-        model: ENV.OPENROUTER_MODEL,
+        model: ENV.OPENROUTER_VISION_MODEL || ENV.OPENROUTER_MODEL,
+        max_tokens: 2048,
         messages: [{ role: 'user', content: [{ type: 'text', text: prompt + '\nRespond with JSON only.' }, { type: 'image_url', image_url: { url: imageUrl } }] }]
       }),
       signal: AbortSignal.timeout(ENV.AI_TIMEOUT_MS)
