@@ -7,7 +7,8 @@ export function errorHandler(err, req, res, next) {
   }
 
   const requestId = req.requestId || null;
-  const status = Number(err?.status) || (err?.type === 'entity.too.large' ? 413 : 500);
+  const uploadStatus = err?.name === 'MulterError' ? (err.code === 'LIMIT_FILE_SIZE' ? 413 : 400) : null;
+  const status = uploadStatus || Number(err?.status) || (err?.type === 'entity.too.large' ? 413 : 500);
   const code = err?.code || (status === 404 ? 'NOT_FOUND' : status === 400 ? 'BAD_REQUEST' : status === 401 ? 'UNAUTHORIZED' : status === 403 ? 'FORBIDDEN' : status === 409 ? 'CONFLICT' : status === 413 ? 'PAYLOAD_TOO_LARGE' : status === 415 ? 'UNSUPPORTED_MEDIA_TYPE' : status === 429 ? 'RATE_LIMITED' : 'INTERNAL_ERROR');
 
   console.error(JSON.stringify({

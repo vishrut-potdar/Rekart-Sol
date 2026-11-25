@@ -45,10 +45,11 @@ export class AuthService {
 
   static async login({ email, password }) {
     const user = await db.findUserByEmail(email);
-    const hashToCheck = user ? user.password_hash : DUMMY_BCRYPT_HASH;
+    const storedHash = user?.password_hash;
+    const hashToCheck = typeof storedHash === 'string' && storedHash ? storedHash : DUMMY_BCRYPT_HASH;
     const isMatch = await bcrypt.compare(password, hashToCheck);
 
-    if (!user || !isMatch) {
+    if (!storedHash || !isMatch) {
       throw AppError.unauthorized('Invalid email or password', 'INVALID_CREDENTIALS');
     }
 

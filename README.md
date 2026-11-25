@@ -53,3 +53,28 @@ npm run dev
 npm test                 # Runs full Node.js test suite (decision engine, security, regressions)
 npm audit --omit=dev     # Verifies 0 production dependency vulnerabilities
 ```
+
+
+## Demo and deployment verification
+
+- Run npm ci, npm run build and npm test, then start the app with npm start. The build check validates the supplied browser bundle and server entry point. The editable React project was absent from the source archive.
+- For automatic detection, set GEMINI_API_KEY and GEMINI_MODEL for a Gemini model available to your account, or set OPENROUTER_API_KEY and OPENROUTER_VISION_MODEL to a vision-capable model. OPENROUTER_MODEL configures chat. Apply provider spending limits. The scanner accepts JPEG, PNG and WebP up to 4 MB and does not retain the scanned photo. Use the manual picker if the provider is unavailable.
+- Configure Production and Preview independently on Vercel. Set JWT_SECRET and, for Firestore, FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY. Deploy the supplied deny-by-default Firestore client rules. Express uses the server service account. Check cloud reads and writes and a cold restart with test accounts before relying on cloud durability.
+- Demo the working-phone sell checklist, a swollen power bank routed to authorised recycling, and a phone with missing quotes shown as borderline. A repair recommendation requires qualifying quotes. Test camera permission, browser Back, refresh, saved items, account sign-in and mobile layout on the deployed URL.
+- Marketplace checkout, payouts, partner pickup booking, rewards, WhatsApp, AR and QR handoff are marked Coming Soon in the consumer app. The V2 terminal and API routes are experimental. Leave V2 disabled for the demo.
+
+### Importing dated phone prices and quotes
+
+The November 17, 2026 source is a historical retail snapshot. The manual model field includes its 28 names. The restricted retail figures and any private quote records are omitted from this archive. Use PHONE_PRICING_DATA_JSON on the server with arrays named retail, sell and repair. Populate the arrays with operator-reviewed records.
+
+| Row | Required fields |
+| --- | --- |
+| All rows | brand, model, asOf (YYYY-MM-DD), source, permissionReference (internal permission or quote-use record) |
+| Retail | storageGb, superbInr, sourceUrl (HTTPS product link), baseVariant (boolean), optional gradePrices keyed by like_new, good, fair, poor |
+| Sell quote | storageGb, amountInr, condition, fullyWorking: true, sourceType of nagpur_shop or direct_buyer |
+| Repair quote | amountInr, fault such as Screen Replacement or Battery Replacement, allIn: true (includes parts, labour and tax), sourceType of nagpur_shop or official_service |
+
+Enable ALLOW_RETAIL_PRICE_PUBLICATION=true only with written republication approval. Quotes copied from a published buy-back tool do not qualify as local buyer quotes. Repair requires at least five comparable, recent seller quotes after filtering and an all-in repair quote. Retail can support release or borderline. The app displays retail separately from seller offers with age and base-variant notes. Licensed retail data is excluded from durable server decision history. The assistant uses saved server quotes for price answers and points users to the result card for current retail references.
+
+
+The main decision flow uses the same comparable-offer requirement for non-phone items. Add the exact item category to each non-phone sell or repair record and leave storageGb unset. Purchase cost, generic category averages and the offline fallback do not supply a resale value. If current sell evidence is missing, Rekart can still show safe next steps and asks for local quotes.

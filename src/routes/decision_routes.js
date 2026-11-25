@@ -1,6 +1,6 @@
 import express from 'express';
 import { z } from 'zod';
-import { DecisionEngine } from '../services/decision/decision_engine.js';
+import { currentSavedPricing, DecisionEngine } from '../services/decision/decision_engine.js';
 import { optionalAuth, authenticateToken } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { db } from '../db/connection.js';
@@ -18,10 +18,13 @@ const DecideBodySchema = z.object({
   ageBracket: z.enum(['<1', '1-2', '3-5', '5+']).optional(),
   working: z.enum(['yes', 'partly', 'no', 'working', 'not_working']).default('partly'),
   condition: z.enum(['like_new', 'good', 'fair', 'poor']).default('good'),
+  storageGb: z.number().int().positive().optional(),
+  batteryNeedsService: z.boolean().optional(),
+  batteryHealthPercent: z.number().min(0).max(100).optional(),
   faultType: z.string().max(120).optional().nullable(),
   symptoms: z.array(z.string().max(120)).max(20).optional(),
   note: z.string().max(500).optional().default(''),
-  quotedRepairCost: z.coerce.number().min(0).max(500000).optional().nullable(),
+  quotedRepairCost: z.number().min(0).max(500000).optional().nullable(),
   originalPrice: z.coerce.number().positive().max(2000000).optional().nullable(),
   priority: z.enum(['balanced', 'max_cash', 'lowest_effort', 'fastest', 'eco_social']).default('balanced'),
   isSwollenBattery: z.boolean().optional().default(false),
@@ -51,10 +54,12 @@ router.post('/', optionalAuth, validate({ body: DecideBodySchema }), async (req,
 router.get('/', authenticateToken, async (req, res, next) => {
   try {
     const items = await db.listItemsByUser(req.user.userId);
-    const decisions = await db.listDecisionsByUser(req.user.userId);
+    const decisions = (await db.listDecisionsByUser(req.user.userId)).map(decision => currentSavedPricing(decision));
+    const valuations = new Map(decisions.map(decision => [decision.item_id, decision.item_summary.server_valuation_inr]));
+    const safeItems = items.map(item => ({ ...item, server_valuation_inr: valuations.get(item.id) ?? null }));
     return res.status(200).json({
       success: true,
-      data: { items, decisions }
+      data: { items: safeItems, decisions }
     });
   } catch (err) {
     next(err);
@@ -71,7 +76,7 @@ router.get('/:itemId', authenticateToken, async (req, res, next) => {
     if (decision.user_id && decision.user_id !== req.user.userId && req.user.role !== 'admin') {
       throw AppError.forbidden('You do not have permission to view this decision');
     }
-    return res.status(200).json({ success: true, data: decision });
+    return res.status(200).json({ success: true, data: currentSavedPricing(decision) });
   } catch (err) {
     next(err);
   }

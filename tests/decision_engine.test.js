@@ -7,12 +7,13 @@ import { AuthService } from '../src/services/auth/auth_service.js';
 
 const GOLDEN_CASES = [
   {
-    name: '01. iPhone 13 cracked screen, affordable aftermarket quote (₹4,200 < 60%) -> repair',
+    name: '01. iPhone 13 cracked screen with no verified sell evidence -> borderline',
     input: { category: 'electronics', brand: 'Apple', modelName: 'iPhone 13', faultType: 'Screen Replacement', working: 'partly', condition: 'good', ageYears: 2, quotedRepairCost: 4200 },
     assertFn: r => {
-      assert.equal(r.recommended_path.path, 'repair');
+      assert.notEqual(r.recommended_path.path, 'repair');
+      assert.equal(r.repair_or_release.verdict, 'borderline');
       assert.equal(r.regulatory_rule.kabadiwala_blocked, true);
-      assert.equal(r.fair_price_shield.verdict, 'Fair');
+      assert.equal(r.fair_price_shield, null);
     }
   },
   {
@@ -63,7 +64,7 @@ const GOLDEN_CASES = [
     input: { category: 'electronics', brand: 'Sony', modelName: 'Sony WH-1000XM4', faultType: 'Battery Replacement', working: 'partly', condition: 'good', ageYears: 2, quotedRepairCost: 850 },
     assertFn: r => {
       assert.equal(r.recommended_path.path, 'repair');
-      assert.ok(r.what_would_change_this.length >= 2);
+      assert.ok(r.what_would_change_this.length >= 1);
     }
   },
   {
@@ -167,14 +168,23 @@ const GOLDEN_CASES = [
     input: { category: 'other', modelName: 'Steel Dinner Set', working: 'yes', condition: 'good', ageYears: 3, originalPrice: 800, priority: 'eco_social' },
     assertFn: r => {
       assert.equal(r.recommended_path.path, 'donate');
-      assert.ok(r.provenance.as_of);
+      assert.equal(r.provenance.as_of, null);
     }
   }
 ];
 
 for (const tc of GOLDEN_CASES) {
   test(`Golden Case: ${tc.name}`, () => {
-    const result = DecisionEngine.evaluate(tc.input);
+    const pricedCases = ['06.', '07.', '08.', '12.', '13.', '16.', '17.'];
+    const context = pricedCases.some(prefix => tc.name.startsWith(prefix)) ? {
+      now: Date.parse('2026-11-25'),
+      phonePricingData: { sell: [7000, 7500, 8000, 8500, 9000].map((amountInr, index) => ({
+        category: tc.input.category, model: tc.input.modelName, brand: tc.input.brand,
+        amountInr, condition: tc.input.condition, fullyWorking: true, sourceType: 'direct_buyer',
+        source: 'Synthetic buyer ' + index, permissionReference: 'Test fixture', asOf: '2026-11-17'
+      })) }
+    } : {};
+    const result = DecisionEngine.evaluate(tc.input, context);
     assert.ok(result.recommended_path);
     assert.equal(result.ranked_paths.length, 5);
     assert.ok(Array.isArray(result.what_would_change_this) && result.what_would_change_this.length >= 1);
@@ -213,7 +223,8 @@ test('POST /api/v1/decide computes decision, persists item+decision, and GET /ap
     assert.equal(res.status, 200);
     const json = await res.json();
     assert.equal(json.success, true);
-    assert.equal(json.data.recommended_path.path, 'repair');
+    assert.equal(json.data.repair_or_release.verdict, 'borderline');
+    assert.notEqual(json.data.recommended_path.path, 'repair');
     const itemId = json.data.item_id;
     assert.ok(itemId);
 

@@ -21,7 +21,7 @@ const GenerateListingSchema = z.object({
   testedFunctions: z.array(z.string().max(100)).max(20).optional().default(['Basic functionality']),
   knownFlaws: z.array(z.string().max(120)).max(20).optional().default([]),
   accessoriesIncluded: z.array(z.string().max(100)).max(20).optional().default([]),
-  suggestedPrice: z.coerce.number().min(0).max(500000).optional().default(1500)
+  suggestedPrice: z.coerce.number().positive().max(500000)
 });
 
 // 1. Marketplace Scam Shield Detector

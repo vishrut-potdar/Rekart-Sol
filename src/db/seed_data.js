@@ -1,6 +1,13 @@
 import { db } from './connection.js';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { ENV } from '../config/env.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const NGO_DIR_PATH = path.resolve(__dirname, '../data/ngo_directory.json');
 
 export async function seedNagpurData() {
   // 0. Seed Demo Accounts
@@ -53,233 +60,53 @@ export async function seedNagpurData() {
     }
   }
 
-  // 1. Seed Partners in Nagpur
-  // Sample/unverified directory entries carry is_sample: true and is_verified: false until field-verified.
-  const partners = [
-    {
-      id: 'p-cpcb-001',
-      name: 'Vidarbha Clean-Earth CPCB Recycler (Sample)',
-      partner_type: 'cpcb_recycler',
-      address: 'Plot 42, MIDC Hingna Industrial Area, Nagpur, Maharashtra 440028',
-      city: 'Nagpur',
-      is_verified: false,
-      is_sample: true,
-      sample_notice: 'Sample directory entry — verify CPCB authorisation before drop-off',
-      verified_on: null,
-      latitude: 21.0965,
-      longitude: 78.9834,
-      pickup_available: true,
-      accepted_categories: ['electronics', 'appliance', 'scrap_metal'],
-      min_acceptance_grade: 'BER',
-      operational_hours: { open: '09:00', close: '18:00' },
-      source: { label: 'Sample pilot placeholder', url: 'https://cpcb.nic.in/e-waste/', as_of: '2026-11-03' },
-      commission_rate: 0.08
-    },
-    {
-      id: 'p-cpcb-002',
-      name: 'Nagpur Green E-Waste Solutions (Sample)',
-      partner_type: 'cpcb_recycler',
-      address: 'Near Octroi Naka, Wadi Bypass Road, Nagpur, Maharashtra 440023',
-      city: 'Nagpur',
-      is_verified: false,
-      is_sample: true,
-      sample_notice: 'Sample directory entry — verify CPCB authorisation before drop-off',
-      verified_on: null,
-      latitude: 21.1492,
-      longitude: 79.0011,
-      pickup_available: true,
-      accepted_categories: ['electronics', 'appliance'],
-      min_acceptance_grade: 'C',
-      operational_hours: { open: '09:30', close: '18:30' },
-      source: { label: 'Sample pilot placeholder', url: 'https://cpcb.nic.in/e-waste/', as_of: '2026-11-03' },
-      commission_rate: 0.075
-    },
-    {
-      id: 'p-rep-001',
-      name: 'Sitabuldi ProTech Device Hub (Sample)',
-      partner_type: 'repair_shop',
-      address: 'Shop 14, Modi No. 2, Sitabuldi Main Road, Nagpur, Maharashtra 440012',
-      city: 'Nagpur',
-      is_verified: false,
-      is_sample: true,
-      sample_notice: 'Sample repair shop placeholder — not yet vetted in person',
-      verified_on: null,
-      latitude: 21.1449,
-      longitude: 79.0833,
-      pickup_available: false,
-      accepted_categories: ['electronics'],
-      min_acceptance_grade: 'C',
-      operational_hours: { open: '10:30', close: '21:00' },
-      commission_rate: 0.10
-    },
-    {
-      id: 'p-rep-002',
-      name: 'Dharampeth Laptop & Appliance Lab (Sample)',
-      partner_type: 'repair_shop',
-      address: 'West High Court Road, Opposite Coffee House, Dharampeth, Nagpur, Maharashtra 440010',
-      city: 'Nagpur',
-      is_verified: false,
-      is_sample: true,
-      sample_notice: 'Sample repair shop placeholder — not yet vetted in person',
-      verified_on: null,
-      latitude: 21.1425,
-      longitude: 79.0620,
-      pickup_available: true,
-      accepted_categories: ['electronics', 'appliance'],
-      min_acceptance_grade: 'B',
-      operational_hours: { open: '10:00', close: '20:30' },
-      commission_rate: 0.10
-    },
-    // Real Nagpur donation points, each with its public source. is_verified=false: not vetted by Rekart itself.
-    // coords_approx: the exact building isn't on OpenStreetMap, so the nearest landmark is used for distance.
-    {
-      id: 'p-ngo-001',
-      name: 'Goonj — Nagpur dropping centre',
-      partner_type: 'ngo',
-      address: 'Soham Home for Senior Living, 175 North Ambazari Road, beside Seva Sadan Saksham High School, Sitabuldi, Nagpur',
-      city: 'Nagpur',
-      latitude: 21.1412, // Jhansi Rani Square, North Ambazari Road
-      longitude: 79.0802,
-      coords_approx: true,
-      is_verified: false,
-      is_sample: false,
-      verified_on: '2026-11-03',
-      pickup_available: false,
-      accepted_categories: ['apparel', 'books', 'furniture', 'kitchenware'],
-      min_acceptance_grade: 'B',
-      operational_hours: { days: 'Mon–Sat', open: '10:00', close: '17:00' },
-      notes: 'Wash clothes and tie shoes in pairs; no corporate bulk donations. Call before visiting.',
-      source: { label: 'goonj.org — dropping centres', url: 'https://goonj.org/dropping-centres/', as_of: '2026-11-03' },
-      commission_rate: 0.00
-    },
-    {
-      id: 'p-ngo-002',
-      name: 'Rotary Club Nagpur clothes drive (Cardin showroom)',
-      partner_type: 'ngo',
-      address: 'Cardin Showroom, WHC Road, near Batukbhai Jewellers, Dharampeth, Nagpur',
-      city: 'Nagpur',
-      latitude: 21.1373, // Batukbhai, West High Court Road (OpenStreetMap)
-      longitude: 79.0601,
-      is_verified: false,
-      is_sample: false,
-      verified_on: '2026-04-02',
-      pickup_available: false,
-      accepted_categories: ['apparel'],
-      min_acceptance_grade: 'B',
-      operational_hours: null,
-      phone: '0712-2525817',
-      notes: 'Clean, washed men’s clothing only — given to tribal families in nearby villages.',
-      source: { label: 'The Hitavada', url: 'https://www.thehitavada.com/Encyc/2026/4/2/rotary-club-nagpur-and-cardin-showroom-dharampeth-launch-clothes-donation-drive.html', as_of: '2026-04-02' },
-      commission_rate: 0.00
-    },
-    {
-      id: 'p-ngo-003',
-      name: 'Eklavya India Foundation',
-      partner_type: 'ngo',
-      address: 'Eklavya Residential Campus, Pithesur, Gorewada Road, Nagpur 441501',
-      city: 'Nagpur',
-      latitude: 21.1917, // Gorewada, Gorewada Road
-      longitude: 79.0102,
-      coords_approx: true,
-      is_verified: false,
-      is_sample: false,
-      verified_on: '2026-11-03',
-      pickup_available: false,
-      accepted_categories: ['electronics'],
-      min_acceptance_grade: 'B',
-      operational_hours: null,
-      phone: '+91 73851 54560',
-      notes: 'Has asked for spare or refurbished laptops for first-generation students. Call first — other devices may not be needed.',
-      source: { label: 'eklavyaindia.org', url: 'https://eklavyaindia.org/', as_of: '2026-11-03' },
-      commission_rate: 0.00
-    },
-    {
-      id: 'p-scrap-001',
-      name: 'Itwari Metal & Textile Scrap Syndicate (Sample)',
-      partner_type: 'kabadiwala',
-      address: 'Bhandara Road, Itwari Grain Market, Nagpur, Maharashtra 440002',
-      city: 'Nagpur',
-      latitude: 21.1539,
-      longitude: 79.1126,
-      is_verified: false,
-      is_sample: true,
-      sample_notice: 'Sample non-electronic scrap entry — electronics are blocked from kabadiwalas',
-      verified_on: null,
-      pickup_available: true,
-      accepted_categories: ['scrap_metal', 'apparel', 'appliance'],
-      min_acceptance_grade: 'BER',
-      operational_hours: { open: '08:00', close: '19:00' },
-      commission_rate: 0.05
-    },
-    {
-      id: 'p-drop-001',
-      name: 'Reliance Digital E-Waste Drop Box (Sample)',
-      partner_type: 'brand_dropbox',
-      address: 'Eternity Mall, Variety Square, Sitabuldi, Nagpur, Maharashtra 440012',
-      city: 'Nagpur',
-      latitude: 21.1443,
-      longitude: 79.0818,
-      is_verified: false,
-      is_sample: true,
-      sample_notice: 'Sample drop-box entry — confirm store bin availability before visiting',
-      verified_on: null,
-      pickup_available: false,
-      accepted_categories: ['electronics'],
-      min_acceptance_grade: 'BER',
-      operational_hours: { open: '11:00', close: '21:30' },
-      commission_rate: 0.00
-    }
-  ];
+  const ngoDir = JSON.parse(fs.readFileSync(NGO_DIR_PATH, 'utf8'));
 
+  // 1. Seed Partners in Nagpur from modular src/data/ngo_directory.json
+  const partners = ngoDir.partners || [];
   for (const p of partners) {
     await db.addPartner(p);
   }
 
   // 2. Seed Real-time NGO Demands
-  const demands = [
-    {
-      id: 'demand-ngo-002-apparel',
-      partner_id: 'p-ngo-002',
-      category: 'apparel',
-      item_description: 'Men’s shirts, trousers, jeans, kurtas, T-shirts (reported 2 Apr 2026)',
-      quantity_demanded: 100,
-      quantity_fulfilled: 0,
-      urgency_level: 'medium',
-      active_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  ];
+  const demands = (ngoDir.active_demands || []).map(d => ({
+    id: d.id,
+    partner_id: d.partner_id,
+    partner_name: d.partner_name,
+    category: d.category,
+    item_description: d.item_description,
+    quantity_demanded: d.quantity_demanded,
+    quantity_fulfilled: d.quantity_fulfilled || 0,
+    urgency_level: d.urgency_level || 'medium',
+    source_label: d.source_label || null,
+    active_until: d.active_until || new Date(Date.now() + (d.days_valid || 30) * 24 * 60 * 60 * 1000).toISOString()
+  }));
 
   for (const d of demands) {
     await db.addDemand(d);
   }
 
-  // 3. Seed Society Drives
-  const drives = [
-    {
-      id: 'drive-empress-city-001',
-      society_name: 'Empress City Towers RWA',
-      rwa_contact_name: 'Rajesh Sharma',
-      rwa_phone: '+91-9823012345',
-      latitude: 21.1501,
-      longitude: 79.0921,
-      drive_start: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-      drive_end: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-      accepted_categories: ['apparel', 'electronics', 'books'],
-      status: 'scheduled'
-    },
-    {
-      id: 'drive-vrindavan-002',
-      society_name: 'Vrindavan City Sector 3 Dropoff',
-      rwa_contact_name: 'Anjali Deshmukh',
-      rwa_phone: '+91-9890198765',
-      latitude: 21.0754,
-      longitude: 79.0532,
-      drive_start: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      drive_end: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000).toISOString(),
-      accepted_categories: ['electronics', 'appliance'],
-      status: 'scheduled'
-    }
-  ];
+  // 3. Seed NGO Gatherings & Society Drives
+  const drives = (ngoDir.gatherings_and_drives || []).map(dr => ({
+    id: dr.id,
+    title: dr.title || dr.society_name,
+    society_name: dr.society_name || dr.title,
+    organizer: dr.organizer || dr.society_name,
+    ngo_partner_id: dr.ngo_partner_id || null,
+    venue: dr.venue || dr.area || 'Nagpur',
+    area: dr.area || 'Nagpur',
+    rwa_contact_name: dr.rwa_contact_name || dr.contact_name || 'Coordinator',
+    rwa_phone: dr.rwa_phone || dr.contact_phone || '',
+    latitude: dr.latitude,
+    longitude: dr.longitude,
+    drive_start: dr.drive_start || new Date(Date.now() + (dr.start_offset_days || 2) * 24 * 60 * 60 * 1000).toISOString(),
+    drive_end: dr.drive_end || new Date(Date.now() + (dr.end_offset_days || 5) * 24 * 60 * 60 * 1000).toISOString(),
+    timings: dr.timings || '10:00 AM – 5:00 PM',
+    accepted_categories: dr.accepted_categories || ['apparel'],
+    notes: dr.notes || '',
+    is_sample: dr.is_sample ?? true,
+    status: dr.status || 'scheduled'
+  }));
 
   for (const dr of drives) {
     await db.addSocietyDrive(dr);
@@ -346,6 +173,25 @@ export async function seedNagpurData() {
       p50_median_price: 1750,
       p75_price: 2100,
       sample_count: 61
+    },
+    {
+      city_id: 'nagpur',
+      category: 'electronics',
+      brand: 'Xiaomi',
+      model_name: 'Xiaomi Redmi Note 10',
+      fault_type: 'Screen Replacement',
+      part_grade: 'aftermarket',
+      p25_price: 1400,
+      p50_median_price: 1950,
+      p75_price: 2600,
+      sample_count: 14,
+      provenance: {
+        is_estimate: true,
+        source: 'Sample Sitabuldi aftermarket display quote band (Redmi Note 10)',
+        as_of: '2026-11-03',
+        resale_working_inr: 7200,
+        resale_source: 'Sample Nagpur refurbished/P2P baseline'
+      }
     },
     {
       city_id: 'nagpur',
