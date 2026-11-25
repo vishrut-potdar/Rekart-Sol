@@ -1,3 +1,4 @@
+import { electronicsSubtype } from '../../../public/assets/device-type.js';
 import { REPAIR_THRESHOLD_RATIO } from '../../config/constants.js';
 
 const grades = { like_new: 1, good: 0.963, fair: 0.928, poor: 0.882 };
@@ -9,8 +10,8 @@ const approved = row => row && typeof row.source === 'string' && row.source.trim
   && typeof row.permissionReference === 'string' && row.permissionReference.trim();
 const cleanModel = model => String(model || '').replace(/\b\d{2,4}\s*gb\b/gi, '').trim();
 
-function matches(row, input) {
-  const entered = normalize(cleanModel(input.modelName));
+function matches(row, input, phone) {
+  const entered = normalize(phone ? cleanModel(input.modelName) : input.modelName);
   const model = normalize(row.model);
   const brand = normalize(row.brand);
   return (model === entered || (!model.startsWith(brand) && brand + model === entered))
@@ -18,8 +19,7 @@ function matches(row, input) {
 }
 
 export function isPhone(input) {
-  return input.category === 'electronics' && (/phone|mobile/i.test(input.subCategory || '') || /\b(?:phone|mobile|nokia)\b/i.test(input.modelName || '')
-    || /iphone|pixel\s*\d|galaxy\s*[asmz]\d|redmi|oneplus|nord|poco|reno\s*\d|realme|vivo\s*t2x|motorola\s*edge|nothing\s*phone/i.test(input.modelName || ''));
+  return input.category === 'electronics' && electronicsSubtype(input) === 'smartphone';
 }
 
 function percentile(sorted, fraction) {
@@ -36,7 +36,7 @@ export function calculatePhonePricing(input, data = {}, now = Date.now(), { phon
   const condition = Object.hasOwn(grades, input.condition) ? input.condition : 'good';
   const requestedStorage = input.storageGb ?? Number(String(input.modelName).match(/\b(\d{2,4})\s*gb\b/i)?.[1]);
   const storageMatches = row => !phone || !requestedStorage || row.storageGb === requestedStorage;
-  const comparable = row => matches(row, input) && (phone
+  const comparable = row => matches(row, input, phone) && (phone
     ? !row.category || row.category === 'electronics'
     : row.category === input.category && !row.storageGb);
   const safe = !input.isHazard;

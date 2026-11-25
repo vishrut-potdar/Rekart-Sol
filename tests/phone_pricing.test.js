@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculatePhonePricing } from '../src/services/calculation/phone_pricing.js';
+import { calculatePhonePricing, isPhone } from '../src/services/calculation/phone_pricing.js';
 import { currentSavedPricing, DecisionEngine } from '../src/services/decision/decision_engine.js';
 
 const now = Date.parse('2026-11-25');
@@ -60,4 +60,25 @@ test('purchase cost, a model mentioned in notes and nearby model names do not cr
   assert.equal(currentSavedPricing(exact, Date.parse('2027-04-01')).item_summary.server_valuation_inr, null);
   const legacy = currentSavedPricing({ ...exact, resale_pricing: undefined });
   assert.equal(legacy.recommended_path.net_value_range_inr, null);
+});
+
+
+test('Galaxy Book uses exact laptop quotes even when vision labels it a phone', () => {
+  const laptop = { category: 'electronics', subCategory: 'smartphone', brand: 'Samsung',
+    modelName: 'Samsung Galaxy Book4 512 GB', working: 'yes', condition: 'good' };
+  assert.equal(isPhone(laptop), false);
+  assert.equal(isPhone({ category: 'electronics', modelName: 'Samsung Galaxy S23' }), true);
+  assert.equal(isPhone({ category: 'electronics', modelName: 'OnePlus 12' }), true);
+  assert.equal(isPhone({ category: 'electronics', modelName: 'Samsung Galaxy Tab S9', subCategory: 'mobile' }), false);
+  const laptopOffers = sell.map(row => ({ ...row, category: 'electronics', storageGb: undefined,
+    brand: 'Samsung', model: 'Galaxy Book4 512 GB' }));
+  const mobileOffers = sell.map(row => ({ ...row, category: 'electronics', brand: 'Samsung', model: 'Galaxy S23' }));
+  const data = { sell: [...mobileOffers, ...laptopOffers] };
+  const get = modelName => DecisionEngine.evaluate({ ...laptop, modelName }, { now, phonePricingData: data });
+  const result = get(laptop.modelName);
+  assert.equal(result.item_summary.sub_category, 'laptop');
+  assert.equal(result.phone_pricing, null);
+  assert.deepEqual(result.item_summary.as_is_resale_range_inr, [21000, 23000]);
+  assert.equal(get('Samsung Galaxy Book4 256 GB').item_summary.as_is_resale_range_inr, null);
+  assert.equal(get('Samsung Book').item_summary.as_is_resale_range_inr, null);
 });
