@@ -1,3 +1,4 @@
+import { electronicsSubtype } from '../../../public/assets/device-type.js';
 import { ENV } from '../../config/env.js';
 import { AppError } from '../../utils/errors.js';
 import { calculatePhonePricing, isPhone, readPhonePricingData } from '../calculation/phone_pricing.js';
@@ -76,6 +77,8 @@ export class DecisionEngine {
 
     const ageYears = parseAgeYears(rawInput);
     const modelName = (rawInput.modelName || rawInput.itemName || `${rawInput.brand || ''} ${rawInput.subCategory || category}`).trim();
+    const subCategory = category === 'electronics'
+      ? electronicsSubtype({ modelName, subCategory: rawInput.subCategory }) : rawInput.subCategory;
     const noteText = [rawInput.note, rawInput.faultType, ...(Array.isArray(rawInput.symptoms) ? rawInput.symptoms : [])]
       .filter(Boolean)
       .join(' ');
@@ -215,7 +218,7 @@ export class DecisionEngine {
       }
     };
 
-    const phone = isPhone({ ...rawInput, category, modelName });
+    const phone = isPhone({ category, modelName, subCategory });
     const pricing = calculatePhonePricing(
       { ...rawInput, category, modelName, condition, working, isHazard: severeHazard },
       context.phonePricingData || phonePricingData, context.now, { phone }
@@ -243,7 +246,7 @@ export class DecisionEngine {
       }
       if (working !== 'yes' || rawInput.faultType || rawInput.batteryNeedsService || rawInput.batteryHealthPercent < 80) {
         donate.eligible = false;
-        donate.ineligible_reason = 'Donation requires a fully working phone.';
+        donate.ineligible_reason = 'Donation requires a fully working item.';
       }
     }
 
@@ -274,7 +277,7 @@ export class DecisionEngine {
     return {
       item_summary: {
         category,
-        sub_category: rawInput.subCategory || null,
+        sub_category: subCategory || null,
         brand: rawInput.brand || null,
         model_name: modelName || category,
         age_years: ageYears,

@@ -107,3 +107,16 @@ test('direct scan sends stripped PNG bytes to the configured Gemini model', asyn
   assert.equal(request.headers['x-goog-api-key'], 'synthetic-key');
   assert.equal(JSON.parse(request.body).contents[0].parts[1].inline_data.mime_type, 'image/png');
 });
+
+
+test('vision corrects a Galaxy Book mislabeled as a phone', async t => {
+  const { AiVisionProvider } = await import('../src/services/vision/ai_vision_provider.js');
+  t.mock.method(AiVisionProvider, 'analyzeSingleItem', async () => ({
+    category: 'electronics', sub_category: 'smartphone', brand: 'Samsung', model_name: 'Galaxy Book4 Pro',
+    confidence: 0.94, suggested_flow: 'electronics_mobile'
+  }));
+  const result = await SingleItemClassifierService.classifyImage({ imageUrl: 'test.png' });
+  assert.equal(result.sub_category, 'laptop');
+  assert.equal(result.requires_manual_confirmation, true);
+  assert.notEqual(result.suggested_flow, 'electronics_mobile');
+});

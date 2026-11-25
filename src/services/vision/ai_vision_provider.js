@@ -54,7 +54,7 @@ Output strictly valid JSON with this shape:
 ]`;
 
 const singleItemPrompt = userHint => `Identify this item for reverse commerce triage. User hint: "${String(userHint || '').replace(/"/g, "'").slice(0, 200)}".
-Identify brand and exact model only when visible evidence supports them. Otherwise return null. Report only visible defects, never infer battery health or functionality. Return ONLY valid JSON:
+Samsung Galaxy Book is a laptop. Distinguish laptops, tablets and phones by the device, not by the manufacturer. Identify brand and exact model only when visible evidence supports them. Otherwise return null. Report only visible defects, never infer battery health or functionality. Return ONLY valid JSON:
 {
   "category": "electronics|apparel|appliance|furniture|other|unknown",
   "sub_category": "smartphone|laptop|headphones|jacket|mixer|chair|null",
